@@ -2,19 +2,19 @@ import numpy
 import networkx as nx
 
 # Number of patients present in each exchange at the start of the process
-START_SIZE = 10
+START_SIZE = 100
 
 # Odds a patient will pass after each period
-DEPARTURE_CHANCE = 0.25
+DEPARTURE_CHANCE = 0.05
 
 # How much more frequently the fast exchange matches
-FREQ = 2
+FREQ = 20
 
 # How many new patients exchange receives each period
-INFLOW = 2
+INFLOW = 10
 
 # How many periods to run
-TIME_LEN = 6
+TIME_LEN = 50
 
 id_iterator = 0
 
@@ -58,11 +58,14 @@ def pass_time(exchange):
     """
     Whenever time passes, some patients are lost
     """
+    expirations = 0
+
     for patient in list(exchange.nodes()):
         if numpy.random.uniform() < DEPARTURE_CHANCE:
             exchange.remove_node(patient)
+            expirations = expirations + 1
 
-    return exchange.nodes()
+    return expirations
 
 
 def match(exchange):
@@ -79,7 +82,7 @@ def match(exchange):
         for patient in pair:
             exchange.remove_node(patient)
 
-    return max_match
+    return 2 * len(max_match)
 
 
 def main():
@@ -88,27 +91,35 @@ def main():
     monthly = nx.Graph()
 
     print("Weekly matches: ")
+    expirations = 0
+    matches = 0
     add_patients(weekly, START_SIZE)
     for i in range(TIME_LEN):
         # Add patients
-        print(add_patients(weekly, INFLOW))
+        add_patients(weekly, INFLOW)
         # Match patients if scheduled
-        print(match(weekly))
+        matches = match(weekly) + matches
         # Atrophy patients
-        print(pass_time(weekly))
+        expirations = pass_time(weekly) + expirations
+    print(matches)
+    print(expirations)
 
     print("Monthly matches: ")
+    expirations = 0
+    matches = 0
     add_patients(monthly, START_SIZE)
     for i in range(TIME_LEN):
         # Add patients
-        print(add_patients(monthly, INFLOW))
+        add_patients(monthly, INFLOW)
 
         # Match patients if scheduled
         if not i % FREQ:
-            print(match(monthly))
+            matches = match(monthly) + matches
 
         # Atrophy patients
-        print(pass_time(monthly))
+        expirations = pass_time(monthly) + expirations
+    print(matches)
+    print(expirations)
 
 
 main()
