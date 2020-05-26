@@ -1,6 +1,9 @@
-import numpy
+import random
 import json
 import networkx as nx
+
+# Sets random seed
+random.seed(16)
 
 with open("parameters.json") as param_file:
     parameters = json.load(param_file)
@@ -77,7 +80,7 @@ def add_patients(exchange, num_patients):
         id_iterator = id_iterator + 1
 
         # Create node for new patient
-        new_prob = numpy.random.uniform()
+        new_prob = random.random()
         exchange.add_node(new_id, prob=new_prob, age=0)
 
         # For each existing node, test whether they match
@@ -92,7 +95,7 @@ def add_patients(exchange, num_patients):
 
             # Test whether there's a match, and if so create an edge
             match_chance = old_prob * new_prob
-            if numpy.random.uniform() < match_chance:
+            if random.random() < match_chance:
                 # Starts with weight of zero since not currently
                 # connected to critical node
                 exchange.add_edge(patient[0], new_id, weight=0)
@@ -117,7 +120,7 @@ def pass_time(exchange, expiry_rate, tracker):
 
     for patient in list(exchange.nodes()):
 
-        if numpy.random.uniform() < expiry_rate:
+        if random.random() < expiry_rate:
             # Node has become critical
             critical_patients.add(patient)
 
