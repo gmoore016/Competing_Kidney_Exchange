@@ -1,6 +1,5 @@
 import numpy
 import json
-import random
 import networkx as nx
 
 with open("parameters.json") as param_file:
@@ -127,7 +126,6 @@ def pass_time(exchange, expiry_rate, tracker):
             for edge in edges:
                 patient_1 = edge[0]
                 patient_2 = edge[1]
-                weight = edge[2]['weight']
 
                 # Boost weight by one since at least one connected node is critical
                 exchange[patient_1][patient_2]['weight'] = exchange[patient_1][patient_2]['weight'] + 1
@@ -135,8 +133,6 @@ def pass_time(exchange, expiry_rate, tracker):
     # Once we've marked all the critical edges,
     # we find the optimal match
     max_match = nx.algorithms.max_weight_matching(exchange)
-
-
 
     # Now remove all matched patients
     for edge in max_match:
