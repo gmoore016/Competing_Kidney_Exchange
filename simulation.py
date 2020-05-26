@@ -173,11 +173,16 @@ def main():
     print("Average Matched Age: " + str(sum(weekly_stats.get_ages())/len(weekly_stats.get_ages())))
 
     remaining_ages = nx.get_node_attributes(weekly, 'age')
-    total = 0
-    for node in remaining_ages:
-        total = total + remaining_ages[node]
-    print("Average Unmatched Age: " + str(total/len(remaining_ages)))
+    if not remaining_ages:
+        print("No unmatched patients!")
 
+    else:
+        total = 0
+        for node in remaining_ages:
+            total = total + remaining_ages[node]
+        print("Average Unmatched Age: " + str(total/len(remaining_ages)))
+
+    print('\n')
 
     print("Monthly:")
     monthly_sequence = []
@@ -194,12 +199,16 @@ def main():
     print("Matches: " + str(sum(monthly_stats.get_matches())))
     print("Expiries: " + str(sum(monthly_stats.get_expiries())))
     print("Pool Size: " + str(sum(monthly_stats.get_sizes())/len(monthly_stats.get_sizes())))
-    print("Average Age: " + str(FREQ * sum(weekly_stats.get_ages())/len(weekly_stats.get_ages())))
+    print("Average Matched Age: " + str(FREQ * sum(monthly_stats.get_ages())/len(monthly_stats.get_ages())))
 
-    remaining_ages = nx.get_node_attributes(monthly_stats, 'age')
-    total = 0
-    for node in remaining_ages:
-        total = total + remaining_ages[node]
-    print("Average Unmatched Age: " + str(total/len(remaining_ages)))
+    remaining_ages = nx.get_node_attributes(monthly, 'age')
+    if not remaining_ages:
+        print("No unmatched patients!")
+    else:
+        total = 0
+        for node in remaining_ages:
+            total = total + remaining_ages[node]
+        print("Average Unmatched Age: " + str(total/len(remaining_ages)))
+
 
 main()
