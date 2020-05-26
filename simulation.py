@@ -170,7 +170,14 @@ def main():
     print("Matches: " + str(sum(weekly_stats.get_matches())))
     print("Expiries: " + str(sum(weekly_stats.get_expiries())))
     print("Pool Size: " + str(sum(weekly_stats.get_sizes())//len(weekly_stats.get_sizes())))
-    print("Average Age: " + str(sum(weekly_stats.get_ages())/len(weekly_stats.get_ages())))
+    print("Average Matched Age: " + str(sum(weekly_stats.get_ages())/len(weekly_stats.get_ages())))
+
+    remaining_ages = nx.get_node_attributes(weekly, 'age')
+    total = 0
+    for node in remaining_ages:
+        total = total + remaining_ages[node]
+    print("Average Unmatched Age: " + str(total/len(remaining_ages)))
+
 
     print("Monthly:")
     monthly_sequence = []
