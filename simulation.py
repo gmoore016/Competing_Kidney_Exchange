@@ -134,12 +134,12 @@ def pass_time(exchange, expiry_rate, tracker):
     # we find the optimal match
     max_match = nx.algorithms.max_weight_matching(exchange)
 
+    # Count the matches
+    matches = matches + 2 * len(max_match)
+
     # Now remove all matched patients
     for edge in max_match:
         for patient in edge:
-            # Count the match
-            matches = matches + 1
-
             # Remove it from the unmatched critical patients
             # if it was a critical patient
             if patient in critical_patients:
@@ -151,9 +151,11 @@ def pass_time(exchange, expiry_rate, tracker):
             # Remove the node
             exchange.remove_node(patient)
 
+    # Count the expirations
+    expirations = expirations + len(critical_patients)
+
     # Any unmatched critical patients expire
     for patient in critical_patients:
-        expirations = expirations + 1
         exchange.remove_node(patient)
 
     # Age all remaining patients
