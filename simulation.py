@@ -94,7 +94,9 @@ def add_patients(exchange, num_patients):
             # Test whether there's a match, and if so create an edge
             match_chance = old_prob * new_prob
             if numpy.random.uniform() < match_chance:
-                exchange.add_edge(patient[0], new_id)
+                # Starts with weight of zero since not currently
+                # connected to critical node
+                exchange.add_edge(patient[0], new_id, weight=0)
 
     return exchange.nodes()
 
@@ -106,35 +108,57 @@ def pass_time(exchange, expiry_rate, tracker):
     expirations = 0
     matches = 0
 
+    # Get node attribute data
+    # (There's definitely a better way to do this,
+    #  but I can't get it to work)
     node_ages = nx.get_node_attributes(exchange, "age")
     node_probs = nx.get_node_attributes(exchange, "prob")
 
+    critical_patients = set()
+
     for patient in list(exchange.nodes()):
-        # Possible node will have been removed by neighbor
-        if patient not in exchange.nodes():
-            continue
 
         if numpy.random.uniform() < expiry_rate:
             # Node has become critical
-            # Choose a random neighbor
-            neighbors = list(exchange.neighbors(patient))
+            critical_patients.add(patient)
 
-            # If they have at least one feasible match, match them
-            if neighbors:
-                # Remove neighbor from graph after matching
-                match = random.choice(neighbors)
-                tracker.add_age(node_ages[match])
-                tracker.add_prob(node_probs[match])
-                exchange.remove_node(match)
-                matches = matches + 2
+            # Get list of edges connected to node
+            edges = exchange.edges(patient, data=True)
+            for edge in edges:
+                patient_1 = edge[0]
+                patient_2 = edge[1]
+                weight = edge[2]['weight']
 
-            # If they have no neighbors, they expire
-            else:
-                expirations = expirations + 1
+                # Boost weight by one since at least one connected node is critical
+                exchange[patient_1][patient_2]['weight'] = exchange[patient_1][patient_2]['weight'] + 1
 
-            # Either way, remove the patient
+    # Once we've marked all the critical edges,
+    # we find the optimal match
+    max_match = nx.algorithms.max_weight_matching(exchange)
+
+
+
+    # Now remove all matched patients
+    for edge in max_match:
+        for patient in edge:
+            # Count the match
+            matches = matches + 1
+
+            # Remove it from the unmatched critical patients
+            # if it was a critical patient
+            if patient in critical_patients:
+                critical_patients.remove(patient)
+
             tracker.add_age(node_ages[patient])
+            tracker.add_prob(node_probs[patient])
+
+            # Remove the node
             exchange.remove_node(patient)
+
+    # Any unmatched critical patients expire
+    for patient in critical_patients:
+        expirations = expirations + 1
+        exchange.remove_node(patient)
 
     # Age all remaining patients
     for patient in exchange.nodes():
@@ -172,15 +196,17 @@ def main():
     print("Pool Size: " + str(sum(weekly_stats.get_sizes())//len(weekly_stats.get_sizes())))
     print("Average Matched Age: " + str(sum(weekly_stats.get_ages())/len(weekly_stats.get_ages())))
 
+    # TODO: Expired age
+
     remaining_ages = nx.get_node_attributes(weekly, 'age')
     if not remaining_ages:
-        print("No unmatched patients!")
+        print("No pending patients!")
 
     else:
         total = 0
         for node in remaining_ages:
             total = total + remaining_ages[node]
-        print("Average Unmatched Age: " + str(total/len(remaining_ages)))
+        print("Average Pending Age: " + str(total/len(remaining_ages)))
 
     print('\n')
 
@@ -201,14 +227,16 @@ def main():
     print("Pool Size: " + str(sum(monthly_stats.get_sizes())/len(monthly_stats.get_sizes())))
     print("Average Matched Age: " + str(FREQ * sum(monthly_stats.get_ages())/len(monthly_stats.get_ages())))
 
+    # TODO: Expired age
+
     remaining_ages = nx.get_node_attributes(monthly, 'age')
     if not remaining_ages:
-        print("No unmatched patients!")
+        print("No pending patients!")
     else:
         total = 0
         for node in remaining_ages:
             total = total + remaining_ages[node]
-        print("Average Unmatched Age: " + str(total/len(remaining_ages)))
+        print("Average Pending Age: " + str(total/len(remaining_ages)))
 
 
 main()
