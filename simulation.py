@@ -1,21 +1,25 @@
 import numpy
+import json
 import random
 import networkx as nx
 
+with open("parameters.json") as param_file:
+    parameters = json.load(param_file)
+
 # Number of patients present in each exchange at the start of the process
-START_SIZE = 100
+START_SIZE = parameters["START_SIZE"]
 
 # Odds a patient will pass after each period
-DEPARTURE_CHANCE = 0.05
+EX_RATE = parameters["EX_RATE"]
 
 # How much more frequently the fast exchange matches
-FREQ = 20
+FREQ = parameters["FREQ"]
 
 # How many new patients exchange receives each period
-INFLOW = 10
+INFLOW = parameters["INFLOW"]
 
 # How many periods to run
-TIME_LEN = 50
+TIME_LEN = parameters["TIME_LEN"]
 
 id_iterator = 0
 
@@ -185,5 +189,10 @@ def main():
     print("Pool Size: " + str(sum(monthly_stats.get_sizes())/len(monthly_stats.get_sizes())))
     print("Average Age: " + str(FREQ * sum(weekly_stats.get_ages())/len(weekly_stats.get_ages())))
 
+    remaining_ages = nx.get_node_attributes(monthly_stats, 'age')
+    total = 0
+    for node in remaining_ages:
+        total = total + remaining_ages[node]
+    print("Average Unmatched Age: " + str(total/len(remaining_ages)))
 
 main()
