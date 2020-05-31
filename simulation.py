@@ -174,32 +174,32 @@ def pass_time(exchange, expiry_rate, tracker):
 
 def main():
     # Initiates graphs for each exchange
-    weekly = nx.Graph()
-    monthly = nx.Graph()
+    fast = nx.Graph()
+    slow = nx.Graph()
 
     # Initiates trackers for stats
-    weekly_stats = Tracker()
-    monthly_stats = Tracker()
+    fast_stats = Tracker()
+    slow_stats = Tracker()
 
-    add_patients(weekly, START_SIZE)
-    print("Weekly:")
-    weekly_sequence = []
+    add_patients(fast, START_SIZE)
+    print("Fast:")
+    fast_sequence = []
     for i in range(FREQ * TIME_LEN):
         # Add patients
-        add_patients(weekly, INFLOW)
+        add_patients(fast, INFLOW)
 
         # Patients become critical
-        pass_time(weekly, EX_RATE, weekly_stats)
-        weekly_sequence.append(weekly.order())
+        pass_time(fast, EX_RATE, fast_stats)
+        fast_sequence.append(fast.order())
 
-    print("Matches: " + str(sum(weekly_stats.get_matches())))
-    print("Expiries: " + str(sum(weekly_stats.get_expiries())))
-    print("Pool Size: " + str(sum(weekly_stats.get_sizes())//len(weekly_stats.get_sizes())))
-    print("Average Matched Age: " + str(sum(weekly_stats.get_ages())/len(weekly_stats.get_ages())))
+    print("Matches: " + str(sum(fast_stats.get_matches())))
+    print("Expiries: " + str(sum(fast_stats.get_expiries())))
+    print("Pool Size: " + str(sum(fast_stats.get_sizes())//len(fast_stats.get_sizes())))
+    print("Average Matched Age: " + str(sum(fast_stats.get_ages())/len(fast_stats.get_ages())))
 
     # TODO: Expired age
 
-    remaining_ages = nx.get_node_attributes(weekly, 'age')
+    remaining_ages = nx.get_node_attributes(fast, 'age')
     if not remaining_ages:
         print("No pending patients!")
 
@@ -212,25 +212,25 @@ def main():
     print('\n')
 
     print("Monthly:")
-    monthly_sequence = []
-    add_patients(monthly, START_SIZE)
+    slow_sequence = []
+    add_patients(slow, START_SIZE)
     modified_expiry = 1 - (1 - EX_RATE) ** FREQ
     for i in range(TIME_LEN):
         # Add patients
-        add_patients(monthly, FREQ * INFLOW)
+        add_patients(slow, FREQ * INFLOW)
 
         # Atrophy patients
-        pass_time(monthly, modified_expiry, monthly_stats)
-        monthly_sequence.append(monthly.order())
+        pass_time(slow, modified_expiry, slow_stats)
+        slow_sequence.append(slow.order())
 
-    print("Matches: " + str(sum(monthly_stats.get_matches())))
-    print("Expiries: " + str(sum(monthly_stats.get_expiries())))
-    print("Pool Size: " + str(sum(monthly_stats.get_sizes())/len(monthly_stats.get_sizes())))
-    print("Average Matched Age: " + str(FREQ * sum(monthly_stats.get_ages())/len(monthly_stats.get_ages())))
+    print("Matches: " + str(sum(slow_stats.get_matches())))
+    print("Expiries: " + str(sum(slow_stats.get_expiries())))
+    print("Pool Size: " + str(sum(slow_stats.get_sizes())/len(slow_stats.get_sizes())))
+    print("Average Matched Age: " + str(FREQ * sum(slow_stats.get_ages())/len(slow_stats.get_ages())))
 
     # TODO: Expired age
 
-    remaining_ages = nx.get_node_attributes(monthly, 'age')
+    remaining_ages = nx.get_node_attributes(slow, 'age')
     if not remaining_ages:
         print("No pending patients!")
     else:
