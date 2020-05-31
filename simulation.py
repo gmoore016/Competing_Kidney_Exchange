@@ -1,5 +1,7 @@
 import random
 import networkx as nx
+from tabulate import tabulate
+import statistics
 
 # Sets random seed
 random.seed(16)
@@ -9,7 +11,13 @@ id_iterator = 0
 
 
 class Tracker:
-    def __init__(self):
+    def __init__(self, start_size, inflow, expiry_rate, frequency):
+        # Record parameters of simulation
+        self.start_size = start_size
+        self.inflow = inflow
+        self.expiry_rate = expiry_rate
+        self.frequency = frequency
+
         # For tracking economy's performance
         self.matches = []
         self.expiries = []
@@ -32,6 +40,18 @@ class Tracker:
     def add_prob(self, difficulty):
         self.probs.append(difficulty)
 
+    def get_start_size(self):
+        return self.start_size
+
+    def get_inflow(self):
+        return self.inflow
+
+    def get_expiry_rate(self):
+        return self.expiry_rate
+
+    def get_frequency(self):
+        return self.frequency
+
     def get_matches(self):
         return self.matches
 
@@ -46,6 +66,45 @@ class Tracker:
 
     def get_probs(self):
         return self.probs
+
+
+class Simulation:
+    def __init__(self, parameterization, results):
+        self.start_size = parameterization[0]
+        self.inflow = parameterization[1]
+        self.expiry_rate = parameterization[2]
+        self.frequency = parameterization[3]
+
+        self.avg_matches = statistics.mean([result.get_matches() for result in results])
+        self.sd_matches = statistics.stdev([result.get_matches() for result in results])
+
+        all_ages = []
+        for result in results:
+            all_ages = all_ages + result.get_ages()
+
+        self.avg_age = statistics.mean(all_ages)
+        self.sd_age = statistics.stdev(all_ages)
+
+    def get_inflow(self):
+        return self.inflow
+
+    def get_expiry_rate(self):
+        return self.expiry_rate
+
+    def get_frequency(self):
+        return self.frequency
+
+    def get_avg_matches(self):
+        return self.avg_matches
+
+    def get_sd_matches(self):
+        return self.sd_matches
+
+    def get_avg_age(self):
+        return self.avg_age
+
+    def get_sd_age(self):
+        return self.sd_age
 
 
 def add_patients(exchange, num_patients):
@@ -137,7 +196,7 @@ def run_match(exchange, critical_patients, tracker):
 def run_sim(start_size, inflow, expiry_rate, frequency):
     # Initialize objects
     ex = nx.Graph()
-    stats = Tracker()
+    stats = Tracker(start_size, inflow, expiry_rate, frequency)
 
     # Add starting pool
     add_patients(ex, start_size)
@@ -176,23 +235,98 @@ def run_sim(start_size, inflow, expiry_rate, frequency):
             age_dict[patient] = new_age
         nx.classes.function.set_node_attributes(ex, age_dict, "age")
 
-    print("Frequency==" + str(frequency))
-
-    print("Matches: " + str(sum(stats.get_matches())))
-    print("Expiries: " + str(sum(stats.get_expiries())))
-    print("Pool Size: " + str(ex.order()))
-    print("Average Matched Age: " + str(sum(stats.get_ages()) / len(stats.get_ages())))
-
-    # TODO: Expired age
-
-    remaining_ages = nx.get_node_attributes(ex, 'age')
-    if not remaining_ages:
-        print("No pending patients!")
-
-    else:
-        total = 0
-        for node in remaining_ages:
-            total = total + remaining_ages[node]
-        print("Average Pending Age: " + str(total / len(remaining_ages)))
+    return stats
 
 
+def print_table(values, sds, inflows, exp_rates, frequencies):
+    for freq in frequencies:
+        table = []
+        for inflow in inflows:
+            table.append([inflow] + [str(values[freq][inflow][exp_rate]) for exp_rate in exp_rates])
+            table.append(
+                [str(inflow) + " SD"] + ["(" + str(sds[freq][inflow][exp_rate]) + ")" for exp_rate in exp_rates])
+
+        output = tabulate(table, headers=["Inflow\\Expiry"] + [str(exp_rate) for exp_rate in exp_rates])
+        print("Frequency==" + str(freq))
+        print(output)
+
+
+def main():
+    sample_size = 3
+
+    # How many times more slowly does the "slow" match run?
+    frequencies = [
+        1,   # Daily
+        7,   # Weekly
+        30,  # Monthly
+        87,  # Quarterly
+        350  # Yearly
+    ]
+
+    # What is your chance of criticality each period?
+    exp_rates = [
+        .1,  # Low
+        .5,  # Med
+        .9   # High
+    ]
+
+    # How many new patients arrive each period?
+    inflows = [
+        10,  # Slow
+        50,  # Med
+        100  # Fast
+    ]
+
+    # The list of possible combinations
+    # Will contain tuples of the form (start_size, inflow_exp_rate, freq)
+    # which will get passed as the arguments of run_sim
+    parameterizations = []
+
+    # Generate a tuple for each combination of the above
+    for freq in frequencies:
+        for exp_rate in exp_rates:
+            for inflow in inflows:
+                parameterizations.append((0, inflow, exp_rate, freq))
+
+    # Run the simulations
+    simulations = []
+    for parameterization in parameterizations:
+        # Need to run several samples
+        results = []
+        for i in range(sample_size):
+            # Get tracker object from simulation
+            stats = run_sim(*parameterization)
+            results.append(stats)
+
+        simulations.append(Simulation(parameterization, results))
+
+    # Create template for generating output
+    freq_tables = {}
+    for freq in frequencies:
+        freq_tables[freq] = {}
+        for inflow in inflows:
+            freq_tables[freq][inflow] = {}
+
+    # Finds and saves the average number of matches with these parameters
+    # Note sum(result.get_matches()) is the total matches in a simulation, so taking
+    # its mean over all results is the mean across samples
+
+    # Pulls and saves the results of each simulation to the dict match_tables, then
+    # outputs it in tabular format
+    match_values = freq_tables.copy()
+    match_sds = freq_tables.copy()
+    for sim in simulations:
+        match_values[sim.get_frequency()][sim.get_inflow()][sim.get_frequency()] = sim.get_avg_matches()
+        match_sds[sim.get_frequency()][sim.get_inflow()][sim.get_frequency()] = sim.get_sd_matches()
+
+    print("Matches:")
+    print_table(match_values, match_sds, inflows, exp_rates, frequencies)
+
+    age_values = freq_tables.copy()
+    age_sds = freq_tables.copy()
+    for sim in simulations:
+        age_values[sim.get_frequency()][sim.get_inflow()][sim.get_frequency()] = sim.get_avg_age()
+        age_sds[sim.get_frequency()][sim.get_inflow()][sim.get_frequency()] = sim.get_sd_age()
+
+    print("Ages:")
+    print_table(age_values, age_sds, inflows, exp_rates, frequencies)
