@@ -10,6 +10,6 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=gsmoore@stanford.edu
 
-module load python
+module load python/3.6.1
 
-python simulation.py
+python3 simulation.py
