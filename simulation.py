@@ -1,28 +1,10 @@
 import random
-import json
 import networkx as nx
 
 # Sets random seed
 random.seed(16)
 
-with open("parameters.json") as param_file:
-    parameters = json.load(param_file)
-
-# Number of patients present in each exchange at the start of the process
-START_SIZE = parameters["START_SIZE"]
-
-# Odds a patient will pass after each period
-EX_RATE = parameters["EX_RATE"]
-
-# How much more frequently the fast exchange matches
-FREQ = parameters["FREQ"]
-
-# How many new patients exchange receives each period
-INFLOW = parameters["INFLOW"]
-
-# How many periods to run
-TIME_LEN = parameters["TIME_LEN"]
-
+# Tracker to maintain unique ids
 id_iterator = 0
 
 
@@ -103,42 +85,29 @@ def add_patients(exchange, num_patients):
     return exchange.nodes()
 
 
-def pass_time(exchange, expiry_rate, tracker):
-    """
-    Whenever time passes, some patients are lost
-    """
-    expirations = 0
-    matches = 0
+def run_match(exchange, critical_patients, tracker):
+    # For each critical patient...
+    for patient in critical_patients:
+        # Get list of edges connected to node...
+        edges = exchange.edges(patient, data=True)
+        for edge in edges:
+            patient_1 = edge[0]
+            patient_2 = edge[1]
+
+            # Boost weight by one since at least one connected node is critical
+            exchange[patient_1][patient_2]['weight'] = exchange[patient_1][patient_2]['weight'] + 1
+
+    # Find the maximal matching now that we've weighted the edges
+    max_match = nx.algorithms.max_weight_matching(exchange)
+
+    # Record how many matches we made
+    matches = 2 * len(max_match)
 
     # Get node attribute data
     # (There's definitely a better way to do this,
     #  but I can't get it to work)
     node_ages = nx.get_node_attributes(exchange, "age")
     node_probs = nx.get_node_attributes(exchange, "prob")
-
-    critical_patients = set()
-
-    for patient in list(exchange.nodes()):
-
-        if random.random() < expiry_rate:
-            # Node has become critical
-            critical_patients.add(patient)
-
-            # Get list of edges connected to node
-            edges = exchange.edges(patient, data=True)
-            for edge in edges:
-                patient_1 = edge[0]
-                patient_2 = edge[1]
-
-                # Boost weight by one since at least one connected node is critical
-                exchange[patient_1][patient_2]['weight'] = exchange[patient_1][patient_2]['weight'] + 1
-
-    # Once we've marked all the critical edges,
-    # we find the optimal match
-    max_match = nx.algorithms.max_weight_matching(exchange)
-
-    # Count the matches
-    matches = matches + 2 * len(max_match)
 
     # Now remove all matched patients
     for edge in max_match:
@@ -154,52 +123,69 @@ def pass_time(exchange, expiry_rate, tracker):
             # Remove the node
             exchange.remove_node(patient)
 
-    # Count the expirations
-    expirations = expirations + len(critical_patients)
-
     # Any unmatched critical patients expire
+    expiries = len(critical_patients)
     for patient in critical_patients:
         exchange.remove_node(patient)
 
-    # Age all remaining patients
-    for patient in exchange.nodes():
-        new_age = node_ages[patient] + 1
-        nx.classes.function.set_node_attributes(exchange, new_age, "age")
-
-    # Track data
-    tracker.add_expiries(expirations)
+    # Save data to tracker
+    tracker.add_expiries(expiries)
     tracker.add_matches(matches)
     tracker.add_size(exchange.order())
 
 
-def main():
-    # Initiates graphs for each exchange
-    fast = nx.Graph()
-    slow = nx.Graph()
+def run_sim(start_size, inflow, expiry_rate, frequency):
+    # Initialize objects
+    ex = nx.Graph()
+    stats = Tracker()
 
-    # Initiates trackers for stats
-    fast_stats = Tracker()
-    slow_stats = Tracker()
+    # Add starting pool
+    add_patients(ex, start_size)
 
-    add_patients(fast, START_SIZE)
-    print("Fast:")
-    fast_sequence = []
-    for i in range(FREQ * TIME_LEN):
-        # Add patients
-        add_patients(fast, INFLOW)
+    # Generate set of critical patients
+    critical_patients = set()
 
-        # Patients become critical
-        pass_time(fast, EX_RATE, fast_stats)
-        fast_sequence.append(fast.order())
+    # Run the simulation
+    # Currently runs for a year
+    for i in range(1, 51):
+        # If inflow is the total number of patients,
+        # inflow//frequency is the number of patients
+        # that arrive each period
+        add_patients(ex, inflow)
 
-    print("Matches: " + str(sum(fast_stats.get_matches())))
-    print("Expiries: " + str(sum(fast_stats.get_expiries())))
-    print("Pool Size: " + str(sum(fast_stats.get_sizes())//len(fast_stats.get_sizes())))
-    print("Average Matched Age: " + str(sum(fast_stats.get_ages())/len(fast_stats.get_ages())))
+        # Each patient in the pool has a chance of becoming critical
+        for patient in list(ex.nodes()):
+            if random.random() < expiry_rate:
+                # Node has become critical
+                critical_patients.add(patient)
+
+        # If a patient expires at
+        # rate expiry_rate in a day, they expire
+        # at rate expiry_rate * 365 in a year
+        if not i % frequency:
+            # Matched patients are removed
+            run_match(ex, critical_patients, stats)
+
+            # Unmatched critical patients expire
+            critical_patients = set()
+
+        # Age all remaining patients
+        age_dict = {}
+        for patient in ex.nodes():
+            new_age = nx.classes.function.get_node_attributes(ex, "age")[patient] + 1
+            age_dict[patient] = new_age
+        nx.classes.function.set_node_attributes(ex, age_dict, "age")
+
+    print("Frequency==" + str(frequency))
+
+    print("Matches: " + str(sum(stats.get_matches())))
+    print("Expiries: " + str(sum(stats.get_expiries())))
+    print("Pool Size: " + str(ex.order()))
+    print("Average Matched Age: " + str(sum(stats.get_ages()) / len(stats.get_ages())))
 
     # TODO: Expired age
 
-    remaining_ages = nx.get_node_attributes(fast, 'age')
+    remaining_ages = nx.get_node_attributes(ex, 'age')
     if not remaining_ages:
         print("No pending patients!")
 
@@ -207,37 +193,6 @@ def main():
         total = 0
         for node in remaining_ages:
             total = total + remaining_ages[node]
-        print("Average Pending Age: " + str(total/len(remaining_ages)))
-
-    print('\n')
-
-    print("Monthly:")
-    slow_sequence = []
-    add_patients(slow, START_SIZE)
-    modified_expiry = 1 - (1 - EX_RATE) ** FREQ
-    for i in range(TIME_LEN):
-        # Add patients
-        add_patients(slow, FREQ * INFLOW)
-
-        # Atrophy patients
-        pass_time(slow, modified_expiry, slow_stats)
-        slow_sequence.append(slow.order())
-
-    print("Matches: " + str(sum(slow_stats.get_matches())))
-    print("Expiries: " + str(sum(slow_stats.get_expiries())))
-    print("Pool Size: " + str(sum(slow_stats.get_sizes())/len(slow_stats.get_sizes())))
-    print("Average Matched Age: " + str(FREQ * sum(slow_stats.get_ages())/len(slow_stats.get_ages())))
-
-    # TODO: Expired age
-
-    remaining_ages = nx.get_node_attributes(slow, 'age')
-    if not remaining_ages:
-        print("No pending patients!")
-    else:
-        total = 0
-        for node in remaining_ages:
-            total = total + remaining_ages[node]
-        print("Average Pending Age: " + str(total/len(remaining_ages)))
+        print("Average Pending Age: " + str(total / len(remaining_ages)))
 
 
-main()
