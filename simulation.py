@@ -146,19 +146,26 @@ def add_patients(exchange, num_patients):
 
 
 def run_match(exchange, critical_patients, tracker):
+    critical_edges = set()
+
     # For each critical patient...
     for patient in critical_patients:
         # Get list of edges connected to node...
         edges = exchange.edges(patient, data=True)
         for edge in edges:
+            # Add to set of edges we care about
+            critical_edges.add((edge[0], edge[1]))
+
             patient_1 = edge[0]
             patient_2 = edge[1]
 
             # Boost weight by one since at least one connected node is critical
             exchange[patient_1][patient_2]['weight'] = exchange[patient_1][patient_2]['weight'] + 1
 
+    critical_subgraph = exchange.edge_subgraph(critical_edges)
+
     # Find the maximal matching now that we've weighted the edges
-    max_match = nx.algorithms.max_weight_matching(exchange)
+    max_match = nx.algorithms.max_weight_matching(critical_subgraph)
 
     # Record how many matches we made
     matches = 2 * len(max_match)
@@ -279,8 +286,8 @@ def run_sim(parameterization):
 
 def main():
     # How many samples of each parameterization do we want?
-    sample_size = 10
-
+    sample_size = 3
+    '''
     # How many times more slowly does the "slow" match run?
     frequencies = [
         1,   # Daily
@@ -303,6 +310,10 @@ def main():
         50,  # Med
         100  # Fast
     ]
+    '''
+    frequencies = [1, 2]
+    exp_rates = [.8]
+    inflows = [10]
 
     # The list of possible combinations
     # Will contain tuples of the form (start_size, inflow_exp_rate, freq)
