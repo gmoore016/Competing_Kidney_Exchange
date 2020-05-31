@@ -287,7 +287,7 @@ def run_sim(parameterization):
 def main():
     # How many samples of each parameterization do we want?
     sample_size = 3
-    '''
+
     # How many times more slowly does the "slow" match run?
     frequencies = [
         1,   # Daily
@@ -310,10 +310,6 @@ def main():
         50,  # Med
         100  # Fast
     ]
-    '''
-    frequencies = [1, 2]
-    exp_rates = [.8]
-    inflows = [10]
 
     # The list of possible combinations
     # Will contain tuples of the form (start_size, inflow_exp_rate, freq)
