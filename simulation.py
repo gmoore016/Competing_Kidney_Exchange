@@ -2,6 +2,7 @@ import random
 import networkx as nx
 from tabulate import tabulate
 import statistics
+from multiprocessing import Pool
 
 # Sets random seed
 random.seed(16)
@@ -193,7 +194,10 @@ def run_match(exchange, critical_patients, tracker):
     tracker.add_size(exchange.order())
 
 
-def run_sim(start_size, inflow, expiry_rate, frequency):
+def take_sample(start_size, inflow, expiry_rate, frequency, sample_size):
+    # Note we don't use sample_size, it just allows us to pass
+    # the same tuple as before
+
     # Initialize objects
     ex = nx.Graph()
     stats = Tracker(start_size, inflow, expiry_rate, frequency)
@@ -264,7 +268,19 @@ def table_dict(frequencies, inflows):
     return freq_tables
 
 
+def run_sim(parameterization):
+    sample_size = parameterization[4]
+    results = []
+    for i in range(sample_size):
+        results.append(take_sample(*parameterization))
+
+    return Simulation(parameterization, results)
+
+
 def main():
+    # How many samples of each parameterization do we want?
+    sample_size = 10
+
     # How many times more slowly does the "slow" match run?
     frequencies = [
         1,   # Daily
@@ -297,23 +313,12 @@ def main():
     for freq in frequencies:
         for exp_rate in exp_rates:
             for inflow in inflows:
-                parameterizations.append((0, inflow, exp_rate, freq))
+                parameterizations.append((0, inflow, exp_rate, freq, sample_size))
 
     # Run the simulations
     simulations = []
-    for parameterization in parameterizations:
-        # Need to run several samples
-        results = []
-        for i in range(sample_size):
-            # Get tracker object from simulation
-            stats = run_sim(*parameterization)
-            results.append(stats)
-
-        simulations.append(Simulation(parameterization, results))
-
-    # Finds and saves the average number of matches with these parameters
-    # Note sum(result.get_matches()) is the total matches in a simulation, so taking
-    # its mean over all results is the mean across samples
+    with Pool() as pool:
+        simulations = pool.map(run_sim, parameterizations)
 
     # Pulls and saves the results of each simulation to the dict match_tables, then
     # outputs it in tabular format
@@ -340,4 +345,5 @@ def main():
     print_table(age_values, age_sds, inflows, exp_rates, frequencies)
 
 
-main()
+if __name__ == "__main__":
+    main()
