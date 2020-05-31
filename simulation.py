@@ -75,8 +75,8 @@ class Simulation:
         self.expiry_rate = parameterization[2]
         self.frequency = parameterization[3]
 
-        self.avg_matches = statistics.mean([result.get_matches() for result in results])
-        self.sd_matches = statistics.stdev([result.get_matches() for result in results])
+        self.avg_matches = statistics.mean([sum(result.get_matches()) for result in results])
+        self.sd_matches = statistics.stdev([sum(result.get_matches()) for result in results])
 
         all_ages = []
         for result in results:
@@ -244,16 +244,27 @@ def print_table(values, sds, inflows, exp_rates, frequencies):
         for inflow in inflows:
             table.append([inflow] + [str(values[freq][inflow][exp_rate]) for exp_rate in exp_rates])
             table.append(
-                [str(inflow) + " SD"] + ["(" + str(sds[freq][inflow][exp_rate]) + ")" for exp_rate in exp_rates])
+                ["(SD)"] + ["(" + str(sds[freq][inflow][exp_rate]) + ")" for exp_rate in exp_rates])
 
         output = tabulate(table, headers=["Inflow\\Expiry"] + [str(exp_rate) for exp_rate in exp_rates])
         print("Frequency==" + str(freq))
         print(output)
 
 
-def main():
-    sample_size = 3
+def table_dict(frequencies, inflows):
+    """
+    Used to store results of simulations in a way
+    that is easy to convert to tabular form
+    """
+    freq_tables = {}
+    for freq in frequencies:
+        freq_tables[freq] = {}
+        for inflow in inflows:
+            freq_tables[freq][inflow] = {}
+    return freq_tables
 
+
+def main():
     # How many times more slowly does the "slow" match run?
     frequencies = [
         1,   # Daily
@@ -300,33 +311,33 @@ def main():
 
         simulations.append(Simulation(parameterization, results))
 
-    # Create template for generating output
-    freq_tables = {}
-    for freq in frequencies:
-        freq_tables[freq] = {}
-        for inflow in inflows:
-            freq_tables[freq][inflow] = {}
-
     # Finds and saves the average number of matches with these parameters
     # Note sum(result.get_matches()) is the total matches in a simulation, so taking
     # its mean over all results is the mean across samples
 
     # Pulls and saves the results of each simulation to the dict match_tables, then
     # outputs it in tabular format
-    match_values = freq_tables.copy()
-    match_sds = freq_tables.copy()
+    match_values = table_dict(frequencies, inflows)
+    match_sds = table_dict(frequencies, inflows)
     for sim in simulations:
-        match_values[sim.get_frequency()][sim.get_inflow()][sim.get_frequency()] = sim.get_avg_matches()
-        match_sds[sim.get_frequency()][sim.get_inflow()][sim.get_frequency()] = sim.get_sd_matches()
+        match_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_matches()
+        match_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_matches()
+
+    print(match_values)
+    print(match_sds)
 
     print("Matches:")
     print_table(match_values, match_sds, inflows, exp_rates, frequencies)
 
-    age_values = freq_tables.copy()
-    age_sds = freq_tables.copy()
+    age_values = table_dict(frequencies, inflows)
+    age_sds = table_dict(frequencies, inflows)
+
     for sim in simulations:
-        age_values[sim.get_frequency()][sim.get_inflow()][sim.get_frequency()] = sim.get_avg_age()
-        age_sds[sim.get_frequency()][sim.get_inflow()][sim.get_frequency()] = sim.get_sd_age()
+        age_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_age()
+        age_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_age()
 
     print("Ages:")
     print_table(age_values, age_sds, inflows, exp_rates, frequencies)
+
+
+main()
