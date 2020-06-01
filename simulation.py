@@ -291,7 +291,7 @@ def run_sim(parameterization):
 
 def main():
     # How many samples of each parameterization do we want?
-    sample_size = 3
+    sample_size = 10
 
     # How many times more slowly does the "slow" match run?
     frequencies = [
