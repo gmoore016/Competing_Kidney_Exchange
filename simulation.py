@@ -84,7 +84,7 @@ class Simulation:
             all_ages = all_ages + result.get_ages()
 
         # Handles case where no one is matched (I think?)
-        if not all_age:
+        if not all_ages:
             self.avg_age = 0
             self.sd_age = 0
         else:
