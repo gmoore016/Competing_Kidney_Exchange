@@ -4,8 +4,9 @@
 #
 #SBATCH --partition=hlwill
 #SBATCH --time=1-00:00:00
-#SBATCH --mem=50GB
-#SBATCH --ntasks=23
+#SBATCH --mem=50G
+#SBATCH --cpus-per-task=23
+#SBATCH --ntasks=1
 #
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=gsmoore@stanford.edu
