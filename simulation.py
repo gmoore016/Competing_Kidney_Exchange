@@ -83,8 +83,13 @@ class Simulation:
         for result in results:
             all_ages = all_ages + result.get_ages()
 
-        self.avg_age = statistics.mean(all_ages)
-        self.sd_age = statistics.stdev(all_ages)
+        # Handles case where no one is matched (I think?)
+        if not all_age:
+            self.avg_age = 0
+            self.sd_age = 0
+        else:
+            self.avg_age = statistics.mean(all_ages)
+            self.sd_age = statistics.stdev(all_ages)
 
     def get_inflow(self):
         return self.inflow
