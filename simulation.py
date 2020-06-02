@@ -15,6 +15,8 @@ id_iterator = 0
 # All elements of frequencies should be
 # (approximately) factors in order to avoid
 # having leftovers.
+#
+# Has to be +1 so modular arithmetic works
 RUN_LEN = 351
 
 # How many times to run each parameterization
