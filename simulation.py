@@ -212,8 +212,10 @@ def run_match(exchange, critical_patients, tracker):
 
     # Any unmatched critical patients expire
     expiries = len(critical_patients)
-    for patient in critical_patients:
+    for patient in list(critical_patients):
         exchange.remove_node(patient)
+        critical_patients.remove(patient)
+
 
     # Save data to tracker
     tracker.add_expiries(expiries)
@@ -255,9 +257,6 @@ def take_sample(start_size, inflow, expiry_rate, frequency, sample_size):
         if not i % frequency:
             # Matched patients are removed
             run_match(ex, critical_patients, stats)
-
-            # Unmatched critical patients expire
-            critical_patients = set()
 
         # Age all remaining patients
         age_dict = {}
