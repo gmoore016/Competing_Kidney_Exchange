@@ -225,7 +225,6 @@ def run_match(exchange, critical_patients, tracker):
         exchange.remove_node(patient)
         critical_patients.remove(patient)
 
-
     # Save data to tracker
     tracker.add_expiries(expiries)
     tracker.add_matches(matches)
@@ -408,9 +407,6 @@ def main():
     for sim in simulations:
         match_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_matches()
         match_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_matches()
-
-    print(match_values)
-    print(match_sds)
 
     print("Matches:")
     print_table(match_values, match_sds, inflows, exp_rates, frequencies)
