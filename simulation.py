@@ -26,8 +26,12 @@ SAMPLE_SIZE = 10
 START_SIZE = 0
 
 
-class Tracker:
+class Exchange:
     def __init__(self, start_size, inflow, expiry_rate, frequency):
+        # For tracking economy status
+        self.patients = nx.Graph()
+        self.critical_patients = set()
+
         # Record parameters of simulation
         self.start_size = start_size
         self.inflow = inflow
@@ -40,6 +44,122 @@ class Tracker:
         self.sizes = []
         self.ages = []
         self.probs = []
+
+    def add_patients(self, num_patients):
+        # Ensures all nodes have unique id
+        global id_iterator
+
+        for i in range(num_patients):
+            # Creates a node with a personalized probability prob
+            # Immediately increments iterator to ensure id is not reused
+            new_id = id_iterator
+            id_iterator = id_iterator + 1
+
+            # Create node for new patient
+            new_prob = random.random()
+            self.patients.add_node(new_id, prob=new_prob, age=0)
+
+            # For each existing node, test whether they match
+            # Test for each node up to the newest
+            for patient in self.patients.nodes(data=True):
+                # Skip if you're looking at the new node
+                if patient[0] == new_id:
+                    continue
+
+                # Get probability from existing node
+                old_prob = patient[1]['prob']
+
+                # Test whether there's a match, and if so create an edge
+                match_chance = old_prob * new_prob
+                if random.random() < match_chance:
+                    # Starts with weight of zero since not currently
+                    # connected to critical node
+                    self.patients.add_edge(patient[0], new_id, weight=0)
+
+        return self.patients.nodes()
+
+    def activate_critical(self):
+        for patient in list(self.get_patients()):
+            if random.random() < self.expiry_rate:
+                # Node has become critical
+                self.critical_patients.add(patient)
+
+    def run_match(self):
+        critical_edges = set()
+
+        # For each critical patient...
+        for patient in self.critical_patients:
+            # Get list of edges connected to node...
+            edges = self.patients.edges(patient, data=True)
+            for edge in edges:
+                # Add to set of edges we care about
+                critical_edges.add((edge[0], edge[1]))
+
+                patient_1 = edge[0]
+                patient_2 = edge[1]
+
+                # Boost weight by one since at least one connected node is critical
+                self.patients[patient_1][patient_2]['weight'] = self.patients[patient_1][patient_2]['weight'] + 1
+
+        # Generate graph composed only of critical pieces
+        # If we don't do this, zero-value edges may be part of
+        # maximal matching
+        critical_subgraph = self.patients.edge_subgraph(critical_edges)
+
+        # Find the maximal matching now that we've weighted the edges
+        max_match = nx.algorithms.max_weight_matching(critical_subgraph)
+
+        # Record how many matches we made
+        matches = 2 * len(max_match)
+
+        # Get node attribute data
+        # (There's definitely a better way to do this,
+        #  but I can't get it to work)
+        node_ages = nx.get_node_attributes(self.patients, "age")
+        node_probs = nx.get_node_attributes(self.patients, "prob")
+
+        # Now remove all matched patients
+        for edge in max_match:
+            for patient in edge:
+                # Remove it from the unmatched critical patients
+                # if it was a critical patient
+                if patient in self.critical_patients:
+                    self.critical_patients.remove(patient)
+
+                self.add_age(node_ages[patient])
+                self.add_prob(node_probs[patient])
+
+                # Remove the node
+                self.patients.remove_node(patient)
+
+        # Any unmatched critical patients expire
+        expiries = len(self.critical_patients)
+        for patient in list(self.critical_patients):
+            self.patients.remove_node(patient)
+            self.critical_patients.remove(patient)
+
+        # Save data to tracker
+        self.add_expiries(expiries)
+        self.add_matches(matches)
+        self.add_size(self.patients.order())
+
+    def age_patients(self):
+        # Age all remaining patients
+        age_dict = {}
+        for patient in self.get_patients():
+            new_age = nx.classes.function.get_node_attributes(self.patients, "age")[patient] + 1
+            age_dict[patient] = new_age
+        nx.classes.function.set_node_attributes(self.patients, age_dict, "age")
+
+    def dump_garbage(self):
+        # When we return the exchange, we don't need all the bulky
+        # graph data anymore
+        self.patients = 0
+        self.critical_patients = 0
+
+    # Myriad getters/setters for tracking
+    def get_patients(self):
+        return self.patients.nodes()
 
     def add_matches(self, matches):
         self.matches.append(matches)
@@ -128,122 +248,15 @@ class Simulation:
         return self.sd_age
 
 
-def add_patients(exchange, num_patients):
-    """
-    Adds numpatients patients to exchange
-    """
-    # Ensures all nodes have unique id
-    global id_iterator
-
-    for i in range(num_patients):
-        # Creates a node with a personalized probability prob
-        # Immediately increments iterator to ensure id is not reused
-        new_id = id_iterator
-        id_iterator = id_iterator + 1
-
-        # Create node for new patient
-        new_prob = random.random()
-        exchange.add_node(new_id, prob=new_prob, age=0)
-
-        # For each existing node, test whether they match
-        # Test for each node up to the newest
-        for patient in exchange.nodes(data=True):
-            # Skip if you're looking at the new node
-            if patient[0] == new_id:
-                continue
-
-            # Get probability from existing node
-            old_prob = patient[1]['prob']
-
-            # Test whether there's a match, and if so create an edge
-            match_chance = old_prob * new_prob
-            if random.random() < match_chance:
-                # Starts with weight of zero since not currently
-                # connected to critical node
-                exchange.add_edge(patient[0], new_id, weight=0)
-
-    return exchange.nodes()
-
-
-def age_patients(ex):
-    # Age all remaining patients
-    age_dict = {}
-    for patient in ex.nodes():
-        new_age = nx.classes.function.get_node_attributes(ex, "age")[patient] + 1
-        age_dict[patient] = new_age
-    nx.classes.function.set_node_attributes(ex, age_dict, "age")
-
-
-def run_match(exchange, critical_patients, tracker):
-    critical_edges = set()
-
-    # For each critical patient...
-    for patient in critical_patients:
-        # Get list of edges connected to node...
-        edges = exchange.edges(patient, data=True)
-        for edge in edges:
-            # Add to set of edges we care about
-            critical_edges.add((edge[0], edge[1]))
-
-            patient_1 = edge[0]
-            patient_2 = edge[1]
-
-            # Boost weight by one since at least one connected node is critical
-            exchange[patient_1][patient_2]['weight'] = exchange[patient_1][patient_2]['weight'] + 1
-
-    critical_subgraph = exchange.edge_subgraph(critical_edges)
-
-    # Find the maximal matching now that we've weighted the edges
-    max_match = nx.algorithms.max_weight_matching(critical_subgraph)
-
-    # Record how many matches we made
-    matches = 2 * len(max_match)
-
-    # Get node attribute data
-    # (There's definitely a better way to do this,
-    #  but I can't get it to work)
-    node_ages = nx.get_node_attributes(exchange, "age")
-    node_probs = nx.get_node_attributes(exchange, "prob")
-
-    # Now remove all matched patients
-    for edge in max_match:
-        for patient in edge:
-            # Remove it from the unmatched critical patients
-            # if it was a critical patient
-            if patient in critical_patients:
-                critical_patients.remove(patient)
-
-            tracker.add_age(node_ages[patient])
-            tracker.add_prob(node_probs[patient])
-
-            # Remove the node
-            exchange.remove_node(patient)
-
-    # Any unmatched critical patients expire
-    expiries = len(critical_patients)
-    for patient in list(critical_patients):
-        exchange.remove_node(patient)
-        critical_patients.remove(patient)
-
-    # Save data to tracker
-    tracker.add_expiries(expiries)
-    tracker.add_matches(matches)
-    tracker.add_size(exchange.order())
-
-
 def take_sample(start_size, inflow, expiry_rate, frequency, sample_size):
     # Note we don't use sample_size, it just allows us to pass
     # the same tuple as before
 
-    # Initialize objects
-    ex = nx.Graph()
-    stats = Tracker(start_size, inflow, expiry_rate, frequency)
+    # Initialize exchange
+    ex = Exchange(start_size, inflow, expiry_rate, frequency)
 
     # Add starting pool
-    add_patients(ex, start_size)
-
-    # Generate set of critical patients
-    critical_patients = set()
+    ex.add_patients(start_size)
 
     # Run the simulation
     # Currently runs for a year
@@ -251,25 +264,25 @@ def take_sample(start_size, inflow, expiry_rate, frequency, sample_size):
         # If inflow is the total number of patients,
         # inflow//frequency is the number of patients
         # that arrive each period
-        add_patients(ex, inflow)
+        ex.add_patients(inflow)
 
         # Each patient in the pool has a chance of becoming critical
-        for patient in list(ex.nodes()):
-            if random.random() < expiry_rate:
-                # Node has become critical
-                critical_patients.add(patient)
+        ex.activate_critical()
 
         # If a patient expires at
         # rate expiry_rate in a day, they expire
         # at rate expiry_rate * 365 in a year
         if not i % frequency:
             # Matched patients are removed
-            run_match(ex, critical_patients, stats)
+            ex.run_match()
 
         # Age all remaining patients
-        age_patients(ex)
+        ex.age_patients()
 
-    return stats
+    # Dump elements we don't need anymore
+    ex.dump_garbage()
+
+    return ex
 
 
 def print_table(values, sds, inflows, exp_rates, frequencies):
@@ -348,7 +361,6 @@ def main():
                 parameterizations.append((START_SIZE, inflow, exp_rate, freq, sample_size))
 
     # Run the simulations
-    simulations = []
     with Pool() as pool:
         simulations = pool.map(run_sim, parameterizations)
 
