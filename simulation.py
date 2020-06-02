@@ -165,6 +165,15 @@ def add_patients(exchange, num_patients):
     return exchange.nodes()
 
 
+def age_patients(ex):
+    # Age all remaining patients
+    age_dict = {}
+    for patient in ex.nodes():
+        new_age = nx.classes.function.get_node_attributes(ex, "age")[patient] + 1
+        age_dict[patient] = new_age
+    nx.classes.function.set_node_attributes(ex, age_dict, "age")
+
+
 def run_match(exchange, critical_patients, tracker):
     critical_edges = set()
 
@@ -259,11 +268,7 @@ def take_sample(start_size, inflow, expiry_rate, frequency, sample_size):
             run_match(ex, critical_patients, stats)
 
         # Age all remaining patients
-        age_dict = {}
-        for patient in ex.nodes():
-            new_age = nx.classes.function.get_node_attributes(ex, "age")[patient] + 1
-            age_dict[patient] = new_age
-        nx.classes.function.set_node_attributes(ex, age_dict, "age")
+        age_patients(ex)
 
     return stats
 
