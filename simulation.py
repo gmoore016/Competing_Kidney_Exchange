@@ -222,7 +222,7 @@ def take_sample(start_size, inflow, expiry_rate, frequency, sample_size):
 
     # Run the simulation
     # Currently runs for a year
-    for i in range(1, 51):
+    for i in range(1, 351):
         # If inflow is the total number of patients,
         # inflow//frequency is the number of patients
         # that arrive each period
