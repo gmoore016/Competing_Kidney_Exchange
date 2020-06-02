@@ -46,37 +46,42 @@ class Exchange:
         self.probs = []
 
     def add_patients(self, num_patients):
-        # Ensures all nodes have unique id
-        global id_iterator
-
+        """
+        Bulk adds num_patients new patients
+        to the exchange.
+        """
         for i in range(num_patients):
-            # Creates a node with a personalized probability prob
-            # Immediately increments iterator to ensure id is not reused
-            new_id = id_iterator
-            id_iterator = id_iterator + 1
-
             # Create node for new patient
             new_prob = random.random()
-            self.patients.add_node(new_id, prob=new_prob, age=0)
-
-            # For each existing node, test whether they match
-            # Test for each node up to the newest
-            for patient in self.patients.nodes(data=True):
-                # Skip if you're looking at the new node
-                if patient[0] == new_id:
-                    continue
-
-                # Get probability from existing node
-                old_prob = patient[1]['prob']
-
-                # Test whether there's a match, and if so create an edge
-                match_chance = old_prob * new_prob
-                if random.random() < match_chance:
-                    # Starts with weight of zero since not currently
-                    # connected to critical node
-                    self.patients.add_edge(patient[0], new_id, weight=0)
+            self.add_single_patient(new_prob)
 
         return self.patients.nodes()
+
+    def add_single_patient(self, prob):
+        # Creates a node with a personalized probability prob
+        # Immediately increments iterator to ensure id is not reused
+        global id_iterator
+        new_id = id_iterator
+        id_iterator = id_iterator + 1
+
+        self.patients.add_node(new_id, prob=prob, age=0)
+
+        # For each existing node, test whether they match
+        # Test for each node up to the newest
+        for patient in self.patients.nodes(data=True):
+            # Skip if you're looking at the new node
+            if patient[0] == new_id:
+                continue
+
+            # Get probability from existing node
+            old_prob = patient[1]['prob']
+
+            # Test whether there's a match, and if so create an edge
+            match_chance = old_prob * prob
+            if random.random() < match_chance:
+                # Starts with weight of zero since not currently
+                # connected to critical node
+                self.patients.add_edge(patient[0], new_id, weight=0)
 
     def activate_critical(self):
         for patient in list(self.get_patients()):
