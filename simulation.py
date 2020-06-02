@@ -286,21 +286,14 @@ def take_sample(start_size, inflow, expiry_rate, frequency, sample_size):
 
 
 def competition_sample(start_size, inflow, expiry_rate, frequency, sample_size):
-    # Generate exchanges
-    fast = nx.Graph()
-    slow = nx.Graph()
 
     # Generate trackers for exchange stats
-    fast_stats = Tracker(start_size, inflow, expiry_rate, 1)
-    slow_stats = Tracker(start_size, inflow, expiry_rate, frequency)
+    fast = Exchange(start_size, inflow, expiry_rate, 1)
+    slow = Exchange(start_size, inflow, expiry_rate, frequency)
 
     # Add starting patients
-    add_patients(fast, start_size)
-    add_patients(slow, start_size)
-
-    # Generate sets of critical patients
-    fast_criticals = set()
-    slow_criticals = set()
+    fast.add_patients(start_size)
+    slow.add_patients(start_size)
 
     # Run exchange for RUN_LEN periods
     for i in range(1, RUN_LEN):
@@ -309,28 +302,27 @@ def competition_sample(start_size, inflow, expiry_rate, frequency, sample_size):
             choose_exchange(fast, slow)
 
         # Each patient has a chance to expire for each exchange
-        for patient in list(fast.nodes()):
-            if random.random() < expiry_rate:
-                fast_criticals.add(patient)
-
-        for patient in list(slow.nodes()):
-            if random.random() < expiry_rate:
-                slow_criticals.add(patient)
+        fast.activate_critical()
+        slow.activate_critical()
 
         # Knowing critical status, we run matches
         # The fast exchange runs every period
-        run_match(fast, fast_criticals, fast_stats)
+        fast.run_match()
 
         # The slow exchange runs every frequency periods
         if not i % frequency:
-            run_match(slow, slow_criticals, slow_stats)
+            slow.run_match()
 
         # Age all remaining patients
-        age_patients(fast)
-        age_patients(slow)
+        fast.age_patients()
+        slow.age_patients()
+
+    # Get rid of bulky things we don't need anymore
+    fast.dump_garbage()
+    slow.dump_garbage()
 
     # Return the stats as necessary
-    return fast_stats, slow_stats
+    return fast, slow
 
 
 def print_table(values, sds, inflows, exp_rates, frequencies):
