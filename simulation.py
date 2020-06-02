@@ -360,9 +360,6 @@ def main():
         match_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_matches()
         match_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_matches()
 
-    print(match_values)
-    print(match_sds)
-
     print("Matches:")
     print_table(match_values, match_sds, inflows, exp_rates, frequencies)
 
