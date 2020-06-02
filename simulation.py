@@ -273,6 +273,43 @@ def take_sample(start_size, inflow, expiry_rate, frequency, sample_size):
     return stats
 
 
+def competition_sample(start_size, inflow, expiry_rate, frequency, sample_size):
+    fast = nx.Graph()
+    slow = nx.Graph()
+
+    fast_stats = Tracker(start_size, inflow, expiry_rate, 1)
+    slow_stats = Tracker(start_size, inflow, expiry_rate, frequency)
+
+    add_patients(fast, start_size)
+    add_patients(slow, start_size)
+
+    fast_criticals = set()
+    slow_criticals = set()
+
+    for i in range(1, RUN_LEN):
+        for j in range(inflow):
+            choose_exchange(fast, slow)
+
+        for patient in list(fast.nodes()):
+            if random.random() < expiry_rate:
+                fast_criticals.add(patient)
+
+        for patient in list(slow.nodes()):
+            if random.random() < expiry_rate:
+                slow_criticals.add(patient)
+
+        run_match(fast, fast_criticals, fast_stats)
+
+        if not i % frequency:
+            run_match(slow, slow_criticals, slow_stats)
+
+        # Age all remaining patients
+        age_patients(fast)
+        age_patients(slow)
+
+    return fast_stats, slow_stats
+
+
 def print_table(values, sds, inflows, exp_rates, frequencies):
     for freq in frequencies:
         table = []
