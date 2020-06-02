@@ -347,6 +347,17 @@ def run_sim(parameterization):
     return Simulation(parameterization, results)
 
 
+def comp_sim(parameterization):
+    print("Running competitive parameterization: " + str(parameterization))
+    sample_size = parameterization[4]
+    results = []
+    for i in range(sample_size):
+        results.append(competition_sample(*parameterization))
+
+    print("Competitive " + str(parameterization) + " complete")
+    return Simulation(parameterization, results)
+
+
 def main():
     # How many samples of each parameterization do we want?
     sample_size = SAMPLE_SIZE
