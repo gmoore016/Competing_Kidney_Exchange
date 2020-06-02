@@ -10,6 +10,19 @@ random.seed(16)
 # Tracker to maintain unique ids
 id_iterator = 0
 
+# How many periods to run simulation
+# Must be greater than max(frequencies)
+# All elements of frequencies should be
+# (approximately) factors in order to avoid
+# having leftovers.
+RUN_LEN = 351
+
+# How many times to run each parameterization
+SAMPLE_SIZE = 10
+
+# How large should the pool be at the start
+START_SIZE = 0
+
 
 class Tracker:
     def __init__(self, start_size, inflow, expiry_rate, frequency):
@@ -222,7 +235,7 @@ def take_sample(start_size, inflow, expiry_rate, frequency, sample_size):
 
     # Run the simulation
     # Currently runs for a year
-    for i in range(1, 351):
+    for i in range(1, RUN_LEN):
         # If inflow is the total number of patients,
         # inflow//frequency is the number of patients
         # that arrive each period
@@ -291,7 +304,7 @@ def run_sim(parameterization):
 
 def main():
     # How many samples of each parameterization do we want?
-    sample_size = 10
+    sample_size = SAMPLE_SIZE
 
     # How many times more slowly does the "slow" match run?
     frequencies = [
@@ -325,7 +338,7 @@ def main():
     for freq in frequencies:
         for exp_rate in exp_rates:
             for inflow in inflows:
-                parameterizations.append((0, inflow, exp_rate, freq, sample_size))
+                parameterizations.append((START_SIZE, inflow, exp_rate, freq, sample_size))
 
     # Run the simulations
     simulations = []
