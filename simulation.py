@@ -45,6 +45,14 @@ class Exchange:
         self.ages = []
         self.probs = []
 
+    def get_utility(self, prob):
+        """
+        For a patient with match propensity prob, how much utility would
+        they gain from entering this exchange?
+        """
+        util = prob # TODO
+        return util
+
     def add_patients(self, num_patients):
         """
         Bulk adds num_patients new patients
@@ -304,7 +312,15 @@ def competition_sample(start_size, inflow, expiry_rate, frequency, sample_size):
     for i in range(1, RUN_LEN):
         # Each patient successively chooses an exchange
         for j in range(inflow):
-            choose_exchange(fast, slow)
+            # Get the match propensity for a given patient
+            prob = random.random()
+
+            # Patient chooses whichever exchange provides
+            # him the most utility
+            if fast.get_utility(prob) <= slow.get_utility(prob):
+                slow.add_single_patient(prob)
+            else:
+                fast.add_single_patient(prob)
 
         # Each patient has a chance to expire for each exchange
         fast.activate_critical()
