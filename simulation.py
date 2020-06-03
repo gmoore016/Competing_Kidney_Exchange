@@ -248,9 +248,11 @@ class Simulation:
         return self.sd_age
 
 
-def take_sample(start_size, inflow, expiry_rate, frequency, sample_size):
-    # Note we don't use sample_size, it just allows us to pass
-    # the same tuple as before
+def take_sample(parameterization):
+    # Unpack the parameterization
+    # Note sample_size is only there so we can use
+    # the same tuple as passed to run_sim
+    start_size, inflow, expiry_rate, frequency, sample_size = parameterization
 
     # Initialize exchange
     ex = Exchange(start_size, inflow, expiry_rate, frequency)
@@ -314,10 +316,8 @@ def table_dict(frequencies, inflows):
 def run_sim(parameterization):
     print("Running parameterization: " + str(parameterization))
     sample_size = parameterization[4]
-    results = []
-    for i in range(sample_size):
-        results.append(take_sample(*parameterization))
-
+    with Pool() as pool:
+        results = pool.map(take_sample, [parameterization] * sample_size)
     print(str(parameterization) + " complete")
     return Simulation(parameterization, results)
 
@@ -361,8 +361,8 @@ def main():
                 parameterizations.append((START_SIZE, inflow, exp_rate, freq, sample_size))
 
     # Run the simulations
-    with Pool() as pool:
-        simulations = pool.map(run_sim, parameterizations)
+    for parameterization in parameterizations:
+        run_sim(parameterization)
 
     # Pulls and saves the results of each simulation to the dict match_tables, then
     # outputs it in tabular format
