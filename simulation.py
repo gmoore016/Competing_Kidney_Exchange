@@ -294,13 +294,13 @@ def table_dict(frequencies, inflows):
 
 
 def run_sim(parameterization):
-    print("Running parameterization: " + str(parameterization))
+    print("Running parameterization: " + str(parameterization), flush=True)
     sample_size = parameterization[4]
     results = []
     for i in range(sample_size):
         results.append(take_sample(*parameterization))
 
-    print(str(parameterization) + " complete")
+    print(str(parameterization) + " complete", flush=True)
     return Simulation(parameterization, results)
 
 
