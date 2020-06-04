@@ -220,11 +220,22 @@ class Simulation:
 
         # Handles case where no one is matched (I think?)
         if not all_ages:
-            self.avg_age = 0
-            self.sd_age = 0
+            self.avg_age = -1
+            self.sd_age = -1
         else:
             self.avg_age = statistics.mean(all_ages)
             self.sd_age = statistics.stdev(all_ages)
+
+        all_probs = []
+        for result in results:
+            all_probs = all_probs + result.get_probs()
+
+        if not all_probs:
+            self.avg_prob = -1
+            self.sd_prob = -1
+        else:
+            self.avg_prob = statistics.mean(all_probs)
+            self.sd_prob = statistics.stdev(all_probs)
 
     def get_inflow(self):
         return self.inflow
@@ -246,6 +257,12 @@ class Simulation:
 
     def get_sd_age(self):
         return self.sd_age
+
+    def get_avg_prob(self):
+        return self.avg_prob
+
+    def get_sd_prob(self):
+        return self.sd_prob
 
 
 def take_sample(parameterization):
@@ -366,24 +383,33 @@ def main():
 
     # Pulls and saves the results of each simulation to the dict match_tables, then
     # outputs it in tabular format
+
+    # Print match count table
     match_values = table_dict(frequencies, inflows)
     match_sds = table_dict(frequencies, inflows)
     for sim in simulations:
         match_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_matches()
         match_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_matches()
-
     print("Matches:")
     print_table(match_values, match_sds, inflows, exp_rates, frequencies)
 
+    # Print average matched age table
     age_values = table_dict(frequencies, inflows)
     age_sds = table_dict(frequencies, inflows)
-
     for sim in simulations:
         age_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_age()
         age_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_age()
-
     print("Ages:")
     print_table(age_values, age_sds, inflows, exp_rates, frequencies)
+
+    # Print average matched prob table
+    prob_values = table_dict(frequencies, inflows)
+    prob_sds = table_dict(frequencies, inflows)
+    for sim in simulations:
+        prob_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_prob()
+        prob_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_prob()
+    print("Probs:")
+    print_table(prob_values, prob_sds, inflows, exp_rates, frequencies)
 
 
 if __name__ == "__main__":
