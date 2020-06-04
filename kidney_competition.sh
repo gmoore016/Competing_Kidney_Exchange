@@ -1,10 +1,10 @@
 #!/bin/bash
 #SBATCH --job-name=kdnysm
-#SBATCH --output=kidney-simulation.log
+#SBATCH --output=kidney-simulation.out
 #
 #SBATCH --partition=hlwill
-#SBATCH --time=1-00:00:00
-#SBATCH --mem=50G
+#SBATCH --time=7-00:00:00
+#SBATCH --mem=0
 #SBATCH --cpus-per-task=23
 #SBATCH --ntasks=1
 #
