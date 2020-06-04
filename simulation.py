@@ -211,31 +211,17 @@ class Simulation:
         self.expiry_rate = parameterization[2]
         self.frequency = parameterization[3]
 
-        self.avg_matches = statistics.mean([sum(result.get_matches()) for result in results])
-        self.sd_matches = statistics.stdev([sum(result.get_matches()) for result in results])
+        self.results = results
 
-        all_ages = []
+        # Concats ages
+        self.ages = []
         for result in results:
-            all_ages = all_ages + result.get_ages()
+            self.ages = self.ages + result.get_ages()
 
-        # Handles case where no one is matched (I think?)
-        if not all_ages:
-            self.avg_age = -1
-            self.sd_age = -1
-        else:
-            self.avg_age = statistics.mean(all_ages)
-            self.sd_age = statistics.stdev(all_ages)
-
-        all_probs = []
+        # Concats probs
+        self.probs = []
         for result in results:
-            all_probs = all_probs + result.get_probs()
-
-        if not all_probs:
-            self.avg_prob = -1
-            self.sd_prob = -1
-        else:
-            self.avg_prob = statistics.mean(all_probs)
-            self.sd_prob = statistics.stdev(all_probs)
+            self.probs = self.probs + result.get_probs()
 
     def get_inflow(self):
         return self.inflow
@@ -247,22 +233,22 @@ class Simulation:
         return self.frequency
 
     def get_avg_matches(self):
-        return self.avg_matches
+        return statistics.mean([sum(result.get_matches()) for result in self.results])
 
     def get_sd_matches(self):
-        return self.sd_matches
+        return statistics.stdev([sum(result.get_matches()) for result in self.results])
 
     def get_avg_age(self):
-        return self.avg_age
+        return statistics.mean(self.ages)
 
     def get_sd_age(self):
-        return self.sd_age
+        return statistics.stdev(self.ages)
 
     def get_avg_prob(self):
-        return self.avg_prob
+        return statistics.mean(self.probs)
 
     def get_sd_prob(self):
-        return self.sd_prob
+        return statistics.stdev(self.probs)
 
 
 def take_sample(parameterization):
