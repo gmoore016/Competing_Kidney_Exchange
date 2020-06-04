@@ -345,9 +345,9 @@ def main():
 
     # How many new patients arrive each period?
     inflows = [
-        10,  # Slow
-        50,  # Med
-        100  # Fast
+        3,  # Slow
+        10,  # Med
+        25  # Fast
     ]
 
     # The list of possible combinations
