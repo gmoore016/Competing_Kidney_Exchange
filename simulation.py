@@ -361,8 +361,9 @@ def main():
                 parameterizations.append((START_SIZE, inflow, exp_rate, freq, sample_size))
 
     # Run the simulations
+    simulations = []
     for parameterization in parameterizations:
-        run_sim(parameterization)
+        simulations.append(run_sim(parameterization))
 
     # Pulls and saves the results of each simulation to the dict match_tables, then
     # outputs it in tabular format
