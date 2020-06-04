@@ -288,15 +288,14 @@ def take_sample(parameterization):
 
 
 def print_table(values, sds, inflows, exp_rates, frequencies):
-    for freq in frequencies:
+    for exp_rate in exp_rates:
         table = []
         for inflow in inflows:
-            table.append([inflow] + [str(values[freq][inflow][exp_rate]) for exp_rate in exp_rates])
-            table.append(
-                ["(SD)"] + ["(" + str(sds[freq][inflow][exp_rate]) + ")" for exp_rate in exp_rates])
+            table.append([inflow] + [str(values[freq][inflow][exp_rate]) for freq in frequencies])
+            table.append(["(SD)"] + ["(" + str(sds[freq][inflow][exp_rate]) + ")" for freq in frequencies])
 
-        output = tabulate(table, headers=["Inflow\\Expiry"] + [str(exp_rate) for exp_rate in exp_rates])
-        print("Frequency==" + str(freq))
+        output = tabulate(table, headers=["Inflow\\Frequency"] + [str(freq) for freq in frequencies])
+        print("Expiry rate==" + str(exp_rate))
         print(output)
 
 
