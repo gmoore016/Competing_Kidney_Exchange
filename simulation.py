@@ -23,7 +23,7 @@ RUN_LEN = 351
 SAMPLE_SIZE = 10
 
 # How large should the pool be at the start
-START_SIZE = 0
+START_SIZE = 1
 
 # How much should you discount something one year in the future?
 DISCOUNT_RATE = 0.07
@@ -73,6 +73,8 @@ class Exchange:
         q = self.get_average_prob()
         lam = self.expiry_rate
         r = self.discount_rate
+
+        # TODO: Handle case where exchange is empty
 
         # Probability of matching given a patient is critical
         match_given_crit = 1 - ((1 - prob/((N - 1) * q)) ** (N * lam - 1)) * ((1 - prob/((N * lam - 1) * q)) ** (N * (1 - lam)))
