@@ -59,6 +59,9 @@ class Exchange:
         self.ages = []
         self.probs = []
 
+    def get_average_prob(self):
+        return self.average_prob
+
     def get_utility(self, prob):
         """
         For a patient with match propensity prob, how much utility would
@@ -106,6 +109,9 @@ class Exchange:
         global id_iterator
         new_id = id_iterator
         id_iterator = id_iterator + 1
+
+        # Modify the average probability of the sample
+        self.average_prob = (self.average_prob * self.patients.order() + prob)/(self.patients.order() + 1)
 
         self.patients.add_node(new_id, prob=prob, age=0)
 
@@ -178,18 +184,27 @@ class Exchange:
                 self.add_prob(node_probs[patient])
 
                 # Remove the node
-                self.patients.remove_node(patient)
+                self.remove_patient(patient)
 
         # Any unmatched critical patients expire
         expiries = len(self.critical_patients)
         for patient in list(self.critical_patients):
-            self.patients.remove_node(patient)
+            self.remove_patient(patient)
             self.critical_patients.remove(patient)
 
         # Save data to tracker
         self.add_expiries(expiries)
         self.add_matches(matches)
         self.add_size(self.patients.order())
+
+    def remove_patient(self, patient):
+        # Modifies the average match probability in the exchange
+        prob = nx.get_node_attributes(self.patients, 'prob')[patient]
+        num_patients = self.patients.order()
+        self.average_prob = (self.average_prob * num_patients - prob) / (num_patients - 1)
+
+        # Remove the node from the exchange
+        self.patients.remove_node(patient)
 
     def age_patients(self):
         # Age all remaining patients
