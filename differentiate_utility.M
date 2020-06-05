@@ -1,22 +1,22 @@
 % Defines the utility function in an extended way
 function utility = find_total_utility(p, q, N, lam, r)
     % The probability you do not match with a critical person given you are critical
-    match_w_crit_if_crit = (1 - (p/((N - 1) * q))).^(N * lam - 1);
+    match_w_crit_if_crit = (1 - (p/((N - 1) * q)))^(N * lam - 1);
 
     % The probability you do not match with a noncritical person given you are noncritical
-    match_w_n_crit_if_crit = (1 - (p/((N * lam - 1) * q))).^(N * (1 - lam));
+    match_w_n_crit_if_crit = (1 - (p/((N * lam - 1) * q)))^(N * (1 - lam));
 
     % The probability you are critical and receive a match
     prob_and_crit = lam * (1 - match_w_crit_if_crit * match_w_n_crit_if_crit);
 
     % The probability you are not critical and receive a match
-    prob_and_n_crit = (1 - lam) * (1 - (1 - (p/((N - 1) * q))).^(N * lam));
+    prob_and_n_crit = (1 - lam) * (1 - (1 - (p/((N - 1) * q)))^(N * lam));
 
     %Total probability you receive a match
     prob_of_match = prob_and_crit + prob_and_n_crit;
 
     % Time multiplier
-    divisor = 1 - (1 - r) * (1 - lam) * (1 - (p/((N - 1) * q))).^(N * lam - 1);
+    divisor = 1 - (1 - r) * (1 - lam) * (1 - (p/((N - 1) * q)))^(N * lam - 1);
 
     % Total utility is this this period utility over time multiplier
     total_utility = prob_of_match / divisor;
@@ -52,7 +52,7 @@ assume(0 < lam & lam < 1);
 assume(N, 'positive');
 
 % Generate equation
-utility_long(p, q, N, lam, r) = ((lam * (1 - (p/((N - 1) * q))).^(N * lam - 1) * (1 - (p/((N * lam - 1) * q))).^(N * (1 - lam))) + (1 - lam) * (1 - (1 - (p/((N - 1) * q))).^(N * lam))) / (1 - (1 - r) * (1 - lam) * (1 - (p/((N - 1) * q))).^(N * lam - 1))
+utility_long(p, q, N, lam, r) = ((lam * (1 - (p/((N - 1) * q)))^(N * lam - 1) * (1 - (p/((N * lam - 1) * q)))^(N * (1 - lam))) + (1 - lam) * (1 - (1 - (p/((N - 1) * q)))^(N * lam))) / (1 - (1 - r) * (1 - lam) * (1 - (p/((N - 1) * q)))^(N * lam - 1))
 
 % Find derivatives
 growth_with_thickness = diff(utility_long, N)
