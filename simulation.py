@@ -224,20 +224,17 @@ class Simulation:
         self.expiry_rate = parameterization[2]
         self.frequency = parameterization[3]
 
-        self.avg_matches = statistics.mean([sum(result.get_matches()) for result in results])
-        self.sd_matches = statistics.stdev([sum(result.get_matches()) for result in results])
+        self.results = results
 
-        all_ages = []
+        # Concats ages
+        self.ages = []
         for result in results:
-            all_ages = all_ages + result.get_ages()
+            self.ages = self.ages + result.get_ages()
 
-        # Handles case where no one is matched (I think?)
-        if not all_ages:
-            self.avg_age = 0
-            self.sd_age = 0
-        else:
-            self.avg_age = statistics.mean(all_ages)
-            self.sd_age = statistics.stdev(all_ages)
+        # Concats probs
+        self.probs = []
+        for result in results:
+            self.probs = self.probs + result.get_probs()
 
     def get_inflow(self):
         return self.inflow
@@ -249,21 +246,29 @@ class Simulation:
         return self.frequency
 
     def get_avg_matches(self):
-        return self.avg_matches
+        return statistics.mean([sum(result.get_matches()) for result in self.results])
 
     def get_sd_matches(self):
-        return self.sd_matches
+        return statistics.stdev([sum(result.get_matches()) for result in self.results])
 
     def get_avg_age(self):
-        return self.avg_age
+        return statistics.mean(self.ages)
 
     def get_sd_age(self):
-        return self.sd_age
+        return statistics.stdev(self.ages)
+
+    def get_avg_prob(self):
+        return statistics.mean(self.probs)
+
+    def get_sd_prob(self):
+        return statistics.stdev(self.probs)
 
 
-def take_sample(start_size, inflow, expiry_rate, frequency, sample_size):
-    # Note we don't use sample_size, it just allows us to pass
-    # the same tuple as before
+def take_sample(parameterization):
+    # Unpack the parameterization
+    # Note sample_size is only there so we can use
+    # the same tuple as passed to run_sim
+    start_size, inflow, expiry_rate, frequency, sample_size = parameterization
 
     # Initialize exchange
     ex = Exchange(start_size, inflow, expiry_rate, frequency)
@@ -347,15 +352,14 @@ def competition_sample(start_size, inflow, expiry_rate, frequency, sample_size):
 
 
 def print_table(values, sds, inflows, exp_rates, frequencies):
-    for freq in frequencies:
+    for exp_rate in exp_rates:
         table = []
         for inflow in inflows:
-            table.append([inflow] + [str(values[freq][inflow][exp_rate]) for exp_rate in exp_rates])
-            table.append(
-                ["(SD)"] + ["(" + str(sds[freq][inflow][exp_rate]) + ")" for exp_rate in exp_rates])
+            table.append([inflow] + [str(values[freq][inflow][exp_rate]) for freq in frequencies])
+            table.append(["(SD)"] + ["(" + str(sds[freq][inflow][exp_rate]) + ")" for freq in frequencies])
 
-        output = tabulate(table, headers=["Inflow\\Expiry"] + [str(exp_rate) for exp_rate in exp_rates])
-        print("Frequency==" + str(freq))
+        output = tabulate(table, headers=["Inflow\\Frequency"] + [str(freq) for freq in frequencies])
+        print("Expiry rate==" + str(exp_rate))
         print(output)
 
 
@@ -373,13 +377,10 @@ def table_dict(frequencies, inflows):
 
 
 def run_sim(parameterization):
-    print("Running parameterization: " + str(parameterization))
+    print("Running parameterization: " + str(parameterization), flush=True)
     sample_size = parameterization[4]
-    results = []
-    for i in range(sample_size):
-        results.append(take_sample(*parameterization))
-
-    print(str(parameterization) + " complete")
+    with Pool() as pool:
+        results = pool.map(take_sample, [parameterization] * sample_size)
     return Simulation(parameterization, results)
 
 
@@ -416,9 +417,9 @@ def main():
 
     # How many new patients arrive each period?
     inflows = [
-        10,  # Slow
-        50,  # Med
-        100  # Fast
+        3,  # Slow
+        10,  # Med
+        25  # Fast
     ]
 
     # The list of possible combinations
@@ -433,29 +434,39 @@ def main():
                 parameterizations.append((START_SIZE, inflow, exp_rate, freq, sample_size))
 
     # Run the simulations
-    with Pool() as pool:
-        simulations = pool.map(run_sim, parameterizations)
+    simulations = []
+    for parameterization in parameterizations:
+        simulations.append(run_sim(parameterization))
 
     # Pulls and saves the results of each simulation to the dict match_tables, then
     # outputs it in tabular format
+
+    # Print match count table
     match_values = table_dict(frequencies, inflows)
     match_sds = table_dict(frequencies, inflows)
     for sim in simulations:
         match_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_matches()
         match_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_matches()
-
     print("Matches:")
     print_table(match_values, match_sds, inflows, exp_rates, frequencies)
 
+    # Print average matched age table
     age_values = table_dict(frequencies, inflows)
     age_sds = table_dict(frequencies, inflows)
-
     for sim in simulations:
         age_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_age()
         age_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_age()
-
     print("Ages:")
     print_table(age_values, age_sds, inflows, exp_rates, frequencies)
+
+    # Print average matched prob table
+    prob_values = table_dict(frequencies, inflows)
+    prob_sds = table_dict(frequencies, inflows)
+    for sim in simulations:
+        prob_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_prob()
+        prob_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_prob()
+    print("Probs:")
+    print_table(prob_values, prob_sds, inflows, exp_rates, frequencies)
 
 
 if __name__ == "__main__":
