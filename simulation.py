@@ -54,11 +54,25 @@ class Exchange:
         # Add one since utility is conditional on patient joining the exchange
         N = self.patients.order() + 1
         q = self.get_average_prob()
-        l = self.expiry_rate
+        lam = self.expiry_rate
+        r = self.discount_rate
 
-        match_given_crit = (1 - ((1 - prob/((N - 1) * q)) ** (N * l - 1))
+        # Probability of matching given a patient is critical
+        match_given_crit = 1 - ((1 - prob/((N - 1) * q)) ** (N * lam - 1)) * ((1 - prob/((N * lam - 1) * q)) ** (N * (1 - lam)))
 
-        return util
+        # Probability of matching given a patient is non-critical
+        match_given_n_crit = 1 - (1 - prob/((N - 1) * q)) ** (N * lam)
+
+        # Utility in a given period
+        utility_now = lam * match_given_crit + (1 - lam) * match_given_n_crit
+
+        # Divide by this to expand over time
+        time_multiplier = 1 - (1 - r) * (1 - lam) * ((1 - (prob/((N - 1) * q))) ** (N * lam - 1))
+
+        # Calculate the total utility
+        total_utility = utility_now / time_multiplier
+
+        return total_utility
 
     def add_patients(self, num_patients):
         """
