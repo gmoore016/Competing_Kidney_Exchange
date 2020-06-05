@@ -23,7 +23,7 @@ RUN_LEN = 351
 SAMPLE_SIZE = 10
 
 # How large should the pool be at the start
-START_SIZE = 1
+START_SIZE = 30
 
 # How much should you discount something one year in the future?
 DISCOUNT_RATE = 0.07
@@ -77,16 +77,16 @@ class Exchange:
         # TODO: Handle case where exchange is empty
 
         # Probability of matching given a patient is critical
-        match_given_crit = 1 - ((1 - prob/((N - 1) * q)) ** (N * lam - 1)) * ((1 - prob/((N * lam - 1) * q)) ** (N * (1 - lam)))
+        match_given_crit = 1 - ((1 - prob/((N - 2) * q + prob)) ** (N * lam - 1)) * ((1 - prob/((N * lam - 2) * q + prob)) ** (N * (1 - lam)))
 
         # Probability of matching given a patient is non-critical
-        match_given_n_crit = 1 - (1 - prob/((N - 1) * q)) ** (N * lam)
+        match_given_n_crit = 1 - (1 - prob/((N - 2) * q + prob)) ** (N * lam)
 
         # Utility in a given period
         utility_now = lam * match_given_crit + (1 - lam) * match_given_n_crit
 
         # Divide by this to expand over time
-        time_multiplier = 1 - (1 - r) * (1 - lam) * ((1 - (prob/((N - 1) * q))) ** (N * lam - 1))
+        time_multiplier = 1 - (1 - r) * (1 - lam) * ((1 - (prob/((N - 2) * q + prob))) ** (N * lam - 1))
 
         # Calculate the total utility
         total_utility = utility_now / time_multiplier
