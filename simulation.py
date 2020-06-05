@@ -447,7 +447,7 @@ def comp_sim(parameterization):
     return Simulation(parameterization, results)
 
 
-def main():
+def vaccuum():
     # How many samples of each parameterization do we want?
     sample_size = SAMPLE_SIZE
 
