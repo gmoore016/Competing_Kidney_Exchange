@@ -24,6 +24,15 @@ end
 
 % Generate the symbolic function
 syms symb_utility(p, q, N, lam, r)
+
+% Add relevant assumptions
+assume(0 < p & p < 1)
+assume(0 < q & q < 1)
+assume(0 < r & r < 1)
+assume(0 < lam & lam < 1)
+assume(N, 'positive')
+
+% Generate equation
 symb_utility = find_total_utility(p, q, N, lam, r)
 
 % Find derivatives
@@ -34,6 +43,15 @@ benefits_of_thickness_with_prob = diff(growth_with_thickness, p)
 % well with user-defined functions as inputs
 % Generate the symbolic function
 syms utility_long(p, q, N, lam, r)
+
+% Add relevant assumptions
+assume(0 < p & p < 1)
+assume(0 < q & q < 1)
+assume(0 < r & r < 1)
+assume(0 < lam & lam < 1)
+assume(N, 'positive')
+
+% Generate equation
 utility_long(p, q, N, lam, r) = ((lam * (1 - (p/((N - 1) * q))).^(N * lam - 1) * (1 - (p/((N * lam - 1) * q))).^(N * (1 - lam))) + (1 - lam) * (1 - (1 - (p/((N - 1) * q))).^(N * lam))) / (1 - (1 - r) * (1 - lam) * (1 - (p/((N - 1) * q))).^(N * lam - 1))
 
 % Find derivatives
