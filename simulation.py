@@ -444,7 +444,8 @@ def comp_sim(parameterization):
         results.append(competition_sample(*parameterization))
 
     print("Competitive " + str(parameterization) + " complete")
-    return Simulation(parameterization, results)
+    # Returns two simulation objects, one fast one slow
+    return Simulation(parameterization, results[0]), Simulation(parameterization, results[1])
 
 
 def vaccuum():
@@ -521,5 +522,22 @@ def vaccuum():
     print_table(prob_values, prob_sds, inflows, exp_rates, frequencies)
 
 
+def compete():
+    competition_parameters = (START_SIZE, 10, .7, 7, 3)
+
+    fast, slow = comp_sim(competition_parameters)
+    print("Matches: ")
+    print("Fast: " + str(fast.get_avg_matches()))
+    print("Slow: " + str(slow.get_avg_matches()))
+
+    print("--------------------")
+
+    print("Average Probability: ")
+    print("Fast: " + str(fast.get_avg_prob()))
+    print("Slow: " + str(slow.get_avg_prob()))
+
+
 if __name__ == "__main__":
-    main()
+    compete()
+
+
