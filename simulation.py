@@ -50,7 +50,7 @@ class Exchange:
         # DISCOUNT_RATE yields the weekly discount rate.
         # That's the equivalent of raising to the
         # freq/350 power.
-        self.discount_rate = DISCOUNT_RATE ** (frequency/350)
+        self.discount_rate = 1 - (1 - DISCOUNT_RATE) ** (frequency/350)
 
         # For tracking economy's performance
         self.matches = []
