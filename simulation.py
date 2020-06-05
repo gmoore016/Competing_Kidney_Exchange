@@ -374,7 +374,9 @@ def competition_sample(start_size, inflow, expiry_rate, frequency, sample_size):
 
             # Patient chooses whichever exchange provides
             # him the most utility
-            if fast.get_utility(prob) <= slow.get_utility(prob):
+            fast_u = fast.get_utility(prob)
+            slow_u = slow.get_utility(prob)
+            if fast_u < slow_u:
                 slow.add_single_patient(prob)
             else:
                 fast.add_single_patient(prob)
