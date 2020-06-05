@@ -25,6 +25,9 @@ SAMPLE_SIZE = 10
 # How large should the pool be at the start
 START_SIZE = 0
 
+# How much should you discount something one year in the future?
+DISCOUNT_RATE = 0.07
+
 
 class Exchange:
     def __init__(self, start_size, inflow, expiry_rate, frequency):
@@ -37,6 +40,17 @@ class Exchange:
         self.inflow = inflow
         self.expiry_rate = expiry_rate
         self.frequency = frequency
+
+        # Tracker for the average probability
+        self.average_prob = 0
+
+        # Generate discount rate from frequency
+        # Given 365/freq gives you the annual root to take
+        # (for example, 350/7 is 50, and the 50th root of
+        # DISCOUNT_RATE yields the weekly discount rate.
+        # That's the equivalent of raising to the
+        # freq/350 power.
+        self.discount_rate = DISCOUNT_RATE ** (frequency/350)
 
         # For tracking economy's performance
         self.matches = []
