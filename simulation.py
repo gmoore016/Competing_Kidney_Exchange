@@ -50,7 +50,14 @@ class Exchange:
         For a patient with match propensity prob, how much utility would
         they gain from entering this exchange?
         """
-        util = prob # TODO
+        # Number of patients in the exchange
+        # Add one since utility is conditional on patient joining the exchange
+        N = self.patients.order() + 1
+        q = self.get_average_prob()
+        l = self.expiry_rate
+
+        match_given_crit = (1 - ((1 - prob/((N - 1) * q)) ** (N * l - 1))
+
         return util
 
     def add_patients(self, num_patients):
