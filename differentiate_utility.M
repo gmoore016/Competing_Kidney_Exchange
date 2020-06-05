@@ -1,5 +1,5 @@
 % Defines the utility function in an extended way
-function utility = find_total_utility(p, q, N, lam, r)
+function total_utility = find_total_utility(p, q, N, lam, r)
     % The probability you do not match with a critical person given you are critical
     match_w_crit_if_crit = (1 - (p/((N - 1) * q)))^(N * lam - 1);
 
@@ -39,6 +39,9 @@ symb_utility = find_total_utility(p, q, N, lam, r)
 growth_with_thickness = diff(symb_utility, N)
 benefits_of_thickness_with_prob = diff(growth_with_thickness, p)
 
+% Clear the variables to be reused below
+clear p q N lam r growth_with_thickness benefits_of_thickness_with_prob;
+
 % This should hopefully be the same as above, but I'm not sure if syms works
 % well with user-defined functions as inputs
 % Generate the symbolic function
@@ -55,6 +58,6 @@ assume(N, 'positive');
 utility_long(p, q, N, lam, r) = ((lam * (1 - (p/((N - 1) * q)))^(N * lam - 1) * (1 - (p/((N * lam - 1) * q)))^(N * (1 - lam))) + (1 - lam) * (1 - (1 - (p/((N - 1) * q)))^(N * lam))) / (1 - (1 - r) * (1 - lam) * (1 - (p/((N - 1) * q)))^(N * lam - 1))
 
 % Find derivatives
-growth_with_thickness = diff(utility_long, N)
-benefits_of_thickness_with_prob = diff(growth_with_thickness, p)
+growth_with_thickness_long = diff(utility_long, N)
+benefits_of_thickness_with_prob_long = diff(growth_with_thickness, p)
 
