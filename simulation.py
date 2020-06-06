@@ -3,6 +3,7 @@ import networkx as nx
 from tabulate import tabulate
 import statistics
 from multiprocessing import Pool
+import sys
 
 # Sets random seed
 random.seed(16)
@@ -326,6 +327,9 @@ def run_sim(parameterization):
 def main():
     # How many samples of each parameterization do we want?
     sample_size = SAMPLE_SIZE
+
+    # Boost the maximum recursion depth to prevent crashes
+    sys.setrecursionlimit(10000)
 
     # How many times more slowly does the "slow" match run?
     frequencies = [
