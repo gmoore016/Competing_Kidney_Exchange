@@ -3,12 +3,16 @@ import networkx as nx
 from tabulate import tabulate
 import statistics
 from multiprocessing import Pool
+import csv
 
 # Sets random seed
 random.seed(16)
 
 # Tracker to maintain unique ids
 id_iterator = 0
+
+# Tracker to maintain unique run ids
+run_id = 0
 
 # How many periods to run simulation
 # Must be greater than max(frequencies)
@@ -23,17 +27,25 @@ RUN_LEN = 351
 SAMPLE_SIZE = 10
 
 # How large should the pool be at the start
-START_SIZE = 30
+START_SIZE = 50
 
 # How much should you discount something one year in the future?
 DISCOUNT_RATE = 0.07
 
+SIZE_TRACK_FILE = open("exchange_size.csv", 'w+', newline='')
+SIZE_TRACK_WRITER = csv.writer(SIZE_TRACK_FILE)
+SIZE_TRACK_WRITER.writerow(["Start Size", "Inflow", "Expiry Rate", "Frequency", "Run ID"] + list(range(1, RUN_LEN + 1)))
+
 
 class Exchange:
-    def __init__(self, start_size, inflow, expiry_rate, frequency):
+    def __init__(self, start_size, inflow, expiry_rate, frequency, run_id=0):
         # For tracking economy status
         self.patients = nx.Graph()
         self.critical_patients = set()
+
+        # Used to link fast and slow runs
+        # Only relevant in competitive case
+        self.run_id = run_id
 
         # Record parameters of simulation
         self.start_size = start_size
@@ -58,6 +70,7 @@ class Exchange:
         self.sizes = []
         self.ages = []
         self.probs = []
+        self.size_over_time = []
 
     def get_average_prob(self):
         return self.average_prob
@@ -235,6 +248,11 @@ class Exchange:
         self.patients = 0
         self.critical_patients = 0
 
+    def count_patients(self):
+        # Used to track how the exchange evolves over time
+        num_patients = self.patients.order()
+        self.size_over_time.append(num_patients)
+
     # Myriad getters/setters for tracking
     def get_patients(self):
         return self.patients.nodes()
@@ -300,6 +318,12 @@ class Simulation:
         self.probs = []
         for result in results:
             self.probs = self.probs + result.get_probs()
+
+        # Writes path of size of exchange to CSV file
+        for i in range(len(results)):
+            result = results[i]
+            row = [self.start_size, self.inflow, self.expiry_rate, result.frequency, result.run_id] + result.size_over_time
+            SIZE_TRACK_WRITER.writerow(row)
 
     def get_inflow(self):
         return self.inflow
@@ -372,9 +396,13 @@ def take_sample(parameterization):
 
 def competition_sample(start_size, inflow, expiry_rate, frequency, sample_size):
 
+    # Pulls run_id from global
+    global run_id
+
     # Generate trackers for exchange stats
-    fast = Exchange(start_size, inflow, expiry_rate, 1)
-    slow = Exchange(start_size, inflow, expiry_rate, frequency)
+    fast = Exchange(start_size, inflow, expiry_rate, 1, run_id)
+    slow = Exchange(start_size, inflow, expiry_rate, frequency, run_id)
+    run_id = run_id + 1
 
     # Add starting patients
     fast.add_patients(start_size)
@@ -411,6 +439,11 @@ def competition_sample(start_size, inflow, expiry_rate, frequency, sample_size):
         # Age all remaining patients
         fast.age_patients()
         slow.age_patients()
+
+        # Count patients remaining in pool
+        fast.count_patients()
+        slow.count_patients()
+
 
     # Get rid of bulky things we don't need anymore
     fast.dump_garbage()
@@ -541,7 +574,7 @@ def vaccuum():
 
 def compete():
     # How many times more slowly does the "slow" match run?
-    """frequencies = [
+    frequencies = [
         1,   # Daily
         7,   # Weekly
         30,  # Monthly
@@ -560,10 +593,7 @@ def compete():
     inflows = [
         10,  # Med
         25  # Fast
-    ]"""
-    frequencies = [1]
-    exp_rates = [.9]
-    inflows = [10]
+    ]
 
     # The list of possible combinations
     # Will contain tuples of the form (start_size, inflow_exp_rate, freq)
@@ -659,5 +689,6 @@ def compete():
 
 if __name__ == "__main__":
     compete()
+    SIZE_TRACK_FILE.close()
 
 
