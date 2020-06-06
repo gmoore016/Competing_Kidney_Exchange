@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name=kdnysm
-#SBATCH --output=kidney_competition.out
+#SBATCH --job-name=kdny_cmp
+#SBATCH --output=competition_simulation.out
 #
 #SBATCH --partition=hlwill
 #SBATCH --time=7-00:00:00

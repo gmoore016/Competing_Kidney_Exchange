@@ -486,13 +486,13 @@ def run_sim(parameterization):
 
 
 def comp_sim(parameterization):
-    print("Running competitive parameterization: " + str(parameterization))
+    print("Running competitive parameterization: " + str(parameterization), flush=True)
     sample_size = parameterization[4]
     results = []
     for i in range(sample_size):
         results.append(competition_sample(*parameterization))
 
-    print("Competitive " + str(parameterization) + " complete")
+    print("Competitive " + str(parameterization) + " complete", flush=True)
     # Returns two simulation objects, one fast one slow
     return Simulation(parameterization, [result[0] for result in results]), Simulation(parameterization, [result[1] for result in results])
 
@@ -604,25 +604,7 @@ def compete():
             for inflow in inflows:
                 parameterizations.append((START_SIZE, inflow, exp_rate, freq, SAMPLE_SIZE))
 
-    for parameterization in parameterizations:
-
-        print(parameterization)
-        print("Matches: ")
-        fast, slow = comp_sim(parameterization)
-        print("Fast: " + str(fast.get_avg_matches()))
-        print("SD: " + str(fast.get_sd_matches()))
-        print("Slow: " + str(slow.get_avg_matches()))
-        print("SD: " + str(slow.get_sd_matches()))
-
-        print("--------------------")
-
-        print("Average Matched Probability: ")
-        print("Fast: " + str(fast.get_avg_prob()))
-        print("SD: " + str(fast.get_sd_prob()))
-        print("Slow: " + str(slow.get_avg_prob()))
-        print("SD: " + str(slow.get_sd_prob()))
-
-    # Run the simulations
+    # Aggregate the simulations
     fast_simulations = []
     slow_simulations = []
     for parameterization in parameterizations:
