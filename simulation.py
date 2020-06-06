@@ -579,7 +579,6 @@ def compete():
         7,   # Weekly
         30,  # Monthly
         87,  # Quarterly
-        350  # Yearly
     ]
 
     # What is your chance of criticality each period?
