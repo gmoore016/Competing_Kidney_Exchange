@@ -4,6 +4,7 @@ from tabulate import tabulate
 import statistics
 from multiprocessing import Pool
 import csv
+import sys
 
 # Sets random seed
 random.seed(16)
@@ -336,7 +337,6 @@ class Simulation:
 
     def get_avg_matches(self):
         match_counts = [sum(result.get_matches()) for result in self.results]
-        print(match_counts)
         return statistics.mean(match_counts)
 
     def get_sd_matches(self):
@@ -501,6 +501,9 @@ def comp_sim(parameterization):
 def vaccuum():
     # How many samples of each parameterization do we want?
     sample_size = SAMPLE_SIZE
+
+    # Boost the maximum recursion depth to prevent crashes
+    sys.setrecursionlimit(10000)
 
     # How many times more slowly does the "slow" match run?
     frequencies = [
