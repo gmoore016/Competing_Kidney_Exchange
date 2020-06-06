@@ -74,19 +74,27 @@ class Exchange:
         lam = self.expiry_rate
         r = self.discount_rate
 
+        # If an exchange is empty, it has died
+        # No patient will enter if there are no other patients
+        if N == 1:
+            return 0
+
         # TODO: Handle case where exchange is empty
 
         # Probability of matching given a patient is critical
-        match_given_crit = 1 - ((1 - prob/((N - 2) * q + prob)) ** (N * lam - 1)) * ((1 - prob/((N * lam - 2) * q + prob)) ** (N * (1 - lam)))
+        match_given_crit = 1 - ((1 - prob/((N - 2) * q + prob)) ** (N * lam - 1)) * ((1 - prob/((N * lam - 1) * q + prob)) ** (N * (1 - lam)))
+        assert isinstance(match_given_crit, float)
 
         # Probability of matching given a patient is non-critical
         match_given_n_crit = 1 - (1 - prob/((N - 2) * q + prob)) ** (N * lam)
+        assert isinstance(match_given_n_crit, float)
 
         # Utility in a given period
         utility_now = lam * match_given_crit + (1 - lam) * match_given_n_crit
 
         # Divide by this to expand over time
         time_multiplier = 1 - (1 - r) * (1 - lam) * ((1 - (prob/((N - 2) * q + prob))) ** (N * lam - 1))
+        assert isinstance(time_multiplier, float)
 
         # Calculate the total utility
         total_utility = utility_now / time_multiplier
@@ -203,7 +211,12 @@ class Exchange:
         # Modifies the average match probability in the exchange
         prob = nx.get_node_attributes(self.patients, 'prob')[patient]
         num_patients = self.patients.order()
-        self.average_prob = (self.average_prob * num_patients - prob) / (num_patients - 1)
+
+        # Handles the case of an empty exchange
+        if num_patients > 1:
+            self.average_prob = (self.average_prob * num_patients - prob) / (num_patients - 1)
+        else:
+            self.average_prob = 0
 
         # Remove the node from the exchange
         self.patients.remove_node(patient)
@@ -298,7 +311,9 @@ class Simulation:
         return self.frequency
 
     def get_avg_matches(self):
-        return statistics.mean([sum(result.get_matches()) for result in self.results])
+        match_counts = [sum(result.get_matches()) for result in self.results]
+        print(match_counts)
+        return statistics.mean(match_counts)
 
     def get_sd_matches(self):
         return statistics.stdev([sum(result.get_matches()) for result in self.results])
@@ -447,7 +462,7 @@ def comp_sim(parameterization):
 
     print("Competitive " + str(parameterization) + " complete")
     # Returns two simulation objects, one fast one slow
-    return Simulation(parameterization, results[0]), Simulation(parameterization, results[1])
+    return Simulation(parameterization, [result[0] for result in results]), Simulation(parameterization, [result[1] for result in results])
 
 
 def vaccuum():
@@ -525,18 +540,121 @@ def vaccuum():
 
 
 def compete():
-    competition_parameters = (START_SIZE, 10, .7, 7, 3)
+    # How many times more slowly does the "slow" match run?
+    """frequencies = [
+        1,   # Daily
+        7,   # Weekly
+        30,  # Monthly
+        87,  # Quarterly
+        350  # Yearly
+    ]
 
-    fast, slow = comp_sim(competition_parameters)
-    print("Matches: ")
-    print("Fast: " + str(fast.get_avg_matches()))
-    print("Slow: " + str(slow.get_avg_matches()))
+    # What is your chance of criticality each period?
+    exp_rates = [
+        .1,  # Low
+        .5,  # Med
+        .9   # High
+    ]
 
-    print("--------------------")
+    # How many new patients arrive each period?
+    inflows = [
+        10,  # Med
+        25  # Fast
+    ]"""
+    frequencies = [1]
+    exp_rates = [.9]
+    inflows = [10]
 
-    print("Average Probability: ")
-    print("Fast: " + str(fast.get_avg_prob()))
-    print("Slow: " + str(slow.get_avg_prob()))
+    # The list of possible combinations
+    # Will contain tuples of the form (start_size, inflow_exp_rate, freq)
+    # which will get passed as the arguments of run_sim
+    parameterizations = []
+
+    # Generate a tuple for each combination of the above
+    for freq in frequencies:
+        for exp_rate in exp_rates:
+            for inflow in inflows:
+                parameterizations.append((START_SIZE, inflow, exp_rate, freq, SAMPLE_SIZE))
+
+    for parameterization in parameterizations:
+
+        print(parameterization)
+        print("Matches: ")
+        fast, slow = comp_sim(parameterization)
+        print("Fast: " + str(fast.get_avg_matches()))
+        print("SD: " + str(fast.get_sd_matches()))
+        print("Slow: " + str(slow.get_avg_matches()))
+        print("SD: " + str(slow.get_sd_matches()))
+
+        print("--------------------")
+
+        print("Average Matched Probability: ")
+        print("Fast: " + str(fast.get_avg_prob()))
+        print("SD: " + str(fast.get_sd_prob()))
+        print("Slow: " + str(slow.get_avg_prob()))
+        print("SD: " + str(slow.get_sd_prob()))
+
+    # Run the simulations
+    fast_simulations = []
+    slow_simulations = []
+    for parameterization in parameterizations:
+        fast, slow = comp_sim(parameterization)
+        fast_simulations.append(fast)
+        slow_simulations.append(slow)
+
+    # Pulls and saves the results of each simulation to the dict match_tables, then
+    # outputs it in tabular format
+
+    # Print match count table
+    match_values = table_dict(frequencies, inflows)
+    match_sds = table_dict(frequencies, inflows)
+    for sim in fast_simulations:
+        match_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_matches()
+        match_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_matches()
+    print("Fast Matches:")
+    print_table(match_values, match_sds, inflows, exp_rates, frequencies)
+
+    match_values = table_dict(frequencies, inflows)
+    match_sds = table_dict(frequencies, inflows)
+    for sim in slow_simulations:
+        match_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_matches()
+        match_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_matches()
+    print("Slow Matches:")
+    print_table(match_values, match_sds, inflows, exp_rates, frequencies)
+
+    # Print average matched age table
+    age_values = table_dict(frequencies, inflows)
+    age_sds = table_dict(frequencies, inflows)
+    for sim in fast_simulations:
+        age_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_age()
+        age_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_age()
+    print("Fast Ages:")
+    print_table(age_values, age_sds, inflows, exp_rates, frequencies)
+
+    age_values = table_dict(frequencies, inflows)
+    age_sds = table_dict(frequencies, inflows)
+    for sim in slow_simulations:
+        age_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_age()
+        age_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_age()
+    print("Slow Ages:")
+    print_table(age_values, age_sds, inflows, exp_rates, frequencies)
+
+    # Print average matched prob table
+    prob_values = table_dict(frequencies, inflows)
+    prob_sds = table_dict(frequencies, inflows)
+    for sim in fast_simulations:
+        prob_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_prob()
+        prob_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_prob()
+    print("Fast Probs:")
+    print_table(prob_values, prob_sds, inflows, exp_rates, frequencies)
+
+    prob_values = table_dict(frequencies, inflows)
+    prob_sds = table_dict(frequencies, inflows)
+    for sim in slow_simulations:
+        prob_values[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_avg_prob()
+        prob_sds[sim.get_frequency()][sim.get_inflow()][sim.get_expiry_rate()] = sim.get_sd_prob()
+    print("Slow Probs:")
+    print_table(prob_values, prob_sds, inflows, exp_rates, frequencies)
 
 
 if __name__ == "__main__":
