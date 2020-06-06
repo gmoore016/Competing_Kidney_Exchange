@@ -444,7 +444,6 @@ def competition_sample(start_size, inflow, expiry_rate, frequency, sample_size):
         fast.count_patients()
         slow.count_patients()
 
-
     # Get rid of bulky things we don't need anymore
     fast.dump_garbage()
     slow.dump_garbage()
@@ -501,9 +500,6 @@ def comp_sim(parameterization):
 def vaccuum():
     # How many samples of each parameterization do we want?
     sample_size = SAMPLE_SIZE
-
-    # Boost the maximum recursion depth to prevent crashes
-    sys.setrecursionlimit(10000)
 
     # How many times more slowly does the "slow" match run?
     frequencies = [
@@ -690,6 +686,8 @@ def compete():
 
 
 if __name__ == "__main__":
+    # Boost the maximum recursion depth to prevent crashes
+    sys.setrecursionlimit(10000)
     compete()
     SIZE_TRACK_FILE.close()
 
